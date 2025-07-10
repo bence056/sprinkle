@@ -1,0 +1,18 @@
+{
+  "domain": "sprinkle",
+  "name": "Sprinkle Irrigation Subsystem",
+  "version": "1.0.0",
+  "config_flow": true,
+  "requirements": [],
+  "codeowners": ["@you"],
+  "panel_custom": [
+    {
+      "name": "irrigation-panel",
+      "sidebar_title": "Irrigation",
+      "sidebar_icon": "mdi:sprinkler-variant",
+      "url_path": "irrigation",
+      "module_url": "/local/irrigation-panel.js"
+    }
+  ],
+"documentation": ""
+}
