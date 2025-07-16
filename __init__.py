@@ -4,11 +4,12 @@ import logging
 from .const import *
 
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
+from homeassistant.components import panel_custom
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Create the controller device
     device_registry = async_get_device_registry(hass)
     device = device_registry.async_get_or_create(
@@ -20,11 +21,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         manufacturer=const.MANUFACTURER,
     )
 
-    #Setup data configuration.
+    # Setup data configuration.
     hass.data.setdefault(DOMAIN, {"entities": []})
     hass.data[DOMAIN]["device_id"] = device.id
 
-    #create the default controller entities after controller flow creation.
+    # create the default controller entities after controller flow creation.
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
 
     async def handle_run_zone(call):
@@ -36,5 +37,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 break
 
     hass.services.async_register(DOMAIN, "run_zone", handle_run_zone)
+
+    # Reguister the custom panel
+    await panel_custom.async_register_panel(
+        hass,
+        webcomponent_name=DOMAIN,
+        frontend_url_path="",
+        module_url="",
+        sidebar_title="Irrigation Config",
+        sidebar_icon="mdi:sprinkler-variant",
+        require_admin=True,
+        config={},
+        config_panel_domain=DOMAIN,
+    )
 
     return True

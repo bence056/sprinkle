@@ -2,7 +2,7 @@ from homeassistant import config_entries
 from .const import DOMAIN
 
 class IrrigationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Irrigation Controller creation flow"""
+    """Irrigation Controller creation flow."""
     VERSION = 1
     async def async_step_user(self, user_input=None):
         if self._async_current_entries():
