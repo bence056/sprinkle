@@ -1,0 +1,14 @@
+{
+  "name": "sprinkle",
+  "version": "1.0.0",
+  "description": "Sprinkle Frontend Panel",
+  "main": "dist/sprinkle-panel.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "bence056",
+  "license": "ISC",
+  "dependencies": {
+    "lit": "^3.3.1"
+  }
+}
