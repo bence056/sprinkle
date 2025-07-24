@@ -5,13 +5,37 @@ import {property, customElement} from "lit/decorators.js"
 export class SprinklePanel extends LitElement {
 
     @property({type: Object})
-    hass?: HomeAssistant
+    hass?: Object
+
+    @property() duration = {
+        days: 0,
+        hours: 1,
+        minutes: 30,
+        seconds: 0,
+        milliseconds: 0,
+    };
 
     render() {
         return html`
-            <h1>Hello World</h1>
-            ${this.hass?.states}
+            <ha-card header="Zones">
+                <div class="card-content">
+                    <ha-button @click=${this.handleClick}>Test</ha-button>
+                </div>
+            </ha-card>
+            <ha-card header="Cycles">
+                <div class="card-content">
+                    
+                </div>
+            </ha-card>
+            <ha-card header="Schedules">
+                <div class="card-content">
+                </div>
+            </ha-card>
         `
         }
+
+    handleClick() {
+        this.hass.
+    }
 
 }
