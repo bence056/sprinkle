@@ -40,7 +40,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # create the default controller entities after controller flow creation.
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
 
-    websocket_api.async_register_command(sprinkle_log)
+    websocket_api.async_register_command(hass, sprinkle_log)
 
     return True
 

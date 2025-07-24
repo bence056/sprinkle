@@ -1,11 +1,12 @@
 import {LitElement, html} from "lit";
 import {property, customElement} from "lit/decorators.js"
+import {HomeAssistant} from "../import/frontend/src/types";
 
 @customElement("sprinkle-panel")
 export class SprinklePanel extends LitElement {
 
     @property({type: Object})
-    hass?: Object
+    hass?: HomeAssistant
 
     @property() duration = {
         days: 0,
@@ -35,7 +36,10 @@ export class SprinklePanel extends LitElement {
         }
 
     handleClick() {
-        this.hass.
+        this.hass?.callWS({
+            type: "sprinkle:log",
+            message: "Hello World!"
+        })
     }
 
 }
