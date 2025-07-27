@@ -1,6 +1,6 @@
 import {LitElement, html} from "lit";
 import {property, customElement} from "lit/decorators.js"
-import {HomeAssistant} from "../import/frontend/src/types";
+import {HomeAssistant} from "../types";
 
 @customElement("sprinkle-panel")
 export class SprinklePanel extends LitElement {
@@ -36,10 +36,11 @@ export class SprinklePanel extends LitElement {
         }
 
     handleClick() {
-        this.hass?.callWS({
-            type: "sprinkle:log",
-            message: "Hello World!"
-        })
+        console.log("Button Clicked!");
+        this.hass?.connection.sendMessagePromise({
+            type: "sprinkle/log",
+            message: "Hello World"
+        }).then(() => console.log("Sent!"))
     }
 
 }

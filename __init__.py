@@ -1,8 +1,7 @@
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 import logging
-from homeassistant.components import websocket_api
-from homeassistant.core import callback
+from .websocket import register_websockets
 
 from .const import DOMAIN
 from .panel import (
@@ -34,24 +33,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {"entities": []})
     hass.data[DOMAIN]["device_id"] = device.id
 
-    #Setup the side panel.
-    await panel.async_register_panel(hass)
-
     # create the default controller entities after controller flow creation.
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
 
-    websocket_api.async_register_command(hass, sprinkle_log)
+    # Setup the side panel.
+    await async_register_panel(hass)
+    #Register the websockets.
+    register_websockets(hass)
 
     return True
 
-
-@callback
-
-@websocket_api.websocket_command(
-{
-    "type": "sprinkle:log",
-    "message": str
-})
-@websocket_api.require_admin
-def sprinkle_log(hass: HomeAssistant, connection, msg):
-    _LOGGER.debug("Sprinkle log: %s", msg)
