@@ -74,7 +74,11 @@ export class SprinklePanel extends LitElement {
       border-radius: 8px;
       margin-top: 16px;
     }
-    
+    .valve-select-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
     
     .zone-entry {
       display: grid;
