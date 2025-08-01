@@ -16,3 +16,11 @@ PANEL_NAME = "sprinkle-panel"
 STORAGE_KEY = f"{DOMAIN}.storage"
 DATA_REGISTRY = f"{DOMAIN}_storage"
 STORAGE_VERSION = 1
+
+
+#Http attributes
+
+ATTR_ZONE_ID = "zone_id"
+ATTR_ZONE_NAME = "zone_name"
+ATTR_ZONE_VALVES = "zone_valves"
+ATTR_ZONE_DELETE = "zone_delete"

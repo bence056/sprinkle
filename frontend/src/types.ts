@@ -79,5 +79,3 @@ export interface Zone {
   name: string;
   valves: string[];
 }
-
-export

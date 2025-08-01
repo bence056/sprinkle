@@ -32,23 +32,23 @@ class SprinkleStorage:
         save_key = -1
 
         data = await self._store.async_load()
+        if data is not None:
+            if "save_key" in data:
+                save_key = data["save_key"]
 
-        if "save_key" in data:
-            save_key = data["save_key"]
+            if "zones" in data:
+                for zone in data["zones"]:
+                    zones.append(ZoneData(
+                        id = zone["id"],
+                        name = zone["name"],
+                        assigned_valves = zone["valves"]
+                    ))
 
-        if "zones" in data:
-            for zone in data["zones"]:
-                zones.append(ZoneData(
-                    id = zone["id"],
-                    name = zone["name"],
-                    assigned_valves = zone["valves"]
-                ))
+            self.zones = zones
+            self.save_key = save_key
 
-        self.zones = zones
-        self.save_key = save_key
-
-        if save_key == -1:
-            await self.async_factory_default()
+            if save_key == -1:
+                await self.async_factory_default()
 
     async def async_factory_default(self):
         self.save_key = 1

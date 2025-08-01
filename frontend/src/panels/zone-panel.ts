@@ -5,6 +5,7 @@ import {getValveName, getValveEntities, getValveIcon} from "../helpers";
 import {commonStyle} from "../style";
 import {SubscribeMixin} from "../subscribe-mixin";
 import {UnsubscribeFunc} from "home-assistant-js-websocket";
+import {saveZone, ZoneRequest} from '../websockets'
 
 @customElement('zone-panel')
 export class ZonePanel extends SubscribeMixin(LitElement) {
@@ -26,7 +27,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
         if(!this.hass) return;
 
         //parse zones data.
-        this.hass.data[DOMAIN]
+        // this.hass.data[DOMAIN]
 
     }
 
@@ -103,11 +104,14 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
       this.zones = [...this.zones, newZone];
 
       //call the api to create a zone on the backend.
-        this.hass.connection.sendMessagePromise({
-            type: "sprinkle/create_zone",
-            name: newZone.name,
-            valves: newZone.valves
-        })
+        let zoneData: Partial<ZoneRequest> = {
+            zone_id: newZone.id,
+            zone_name: newZone.name,
+            zone_valves: newZone.valves,
+        }
+        saveZone(this.hass, zoneData).then(()=> {
+            console.log("API call finished");
+        });
 
     }
 
