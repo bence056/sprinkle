@@ -10,6 +10,7 @@ from homeassistant.const import (
     ATTR_ENTITY_ID
 )
 from . import const
+from .coordinator import SprinkleCoordinator
 import voluptuous as vol
 import logging
 from aiohttp.web import Request
@@ -76,8 +77,11 @@ class SprinkleZonesView(HomeAssistantView):
                     f"zone ID: {data[const.ATTR_ZONE_ID]}"
                     f"zone name: {data[const.ATTR_ZONE_NAME]}"
                     f"valves: {data[const.ATTR_ZONE_VALVES]}")
+        if not data[const.ATTR_ZONE_DELETE]:
+            coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
 
-
+            #Just add a device, will check later for existance and for modification requests.
+            await coordinator.async_create_zone(data[const.ATTR_ZONE_NAME], data[const.ATTR_ZONE_ID], data[const.ATTR_ZONE_VALVES])
 
 
 def register_websockets(hass: HomeAssistant):

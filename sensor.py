@@ -9,6 +9,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     entity = TimedRunEntity("zone_1", "Front Yard", ["switch.valve_01", "switch.valve_02"])
     async_add_entities([entity])
 
+    #save the callback to the dataset for later use.
+    hass.data[DOMAIN]["entity_registry"] = async_add_entities
+
 
 class TimedRunEntity(Entity):
 

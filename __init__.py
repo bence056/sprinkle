@@ -5,6 +5,8 @@ import logging
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .websocket import register_websockets
 from .store import async_get_registry
+from .framework.zone import async_create_zone_device
+from .coordinator import SprinkleCoordinator
 
 from .const import DOMAIN
 from .panel import (
@@ -37,7 +39,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(const.DOMAIN, {})
     hass.data[const.DOMAIN] = {
-        "coordinator": coordinator,
+        "coordinator": coordinator
     }
 
 
@@ -51,10 +53,4 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     return True
 
-
-
-class SprinkleCoordinator(DataUpdateCoordinator):
-
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, store):
-        super().__init__(hass, _LOGGER, name=DOMAIN)
 
