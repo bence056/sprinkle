@@ -1,7 +1,10 @@
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 import logging
+
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .websocket import register_websockets
+from .store import async_get_registry
 
 from .const import DOMAIN
 from .panel import (
@@ -18,6 +21,9 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
+    store_obj = await async_get_registry(hass)
+    coordinator = SprinkleCoordinator(hass, entry, store_obj)
+
     # Create the controller device
     device_registry = async_get_device_registry(hass)
     device = device_registry.async_get_or_create(
@@ -29,9 +35,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         manufacturer=const.MANUFACTURER,
     )
 
-    # Setup data configuration.
-    hass.data.setdefault(DOMAIN, {"entities": []})
-    hass.data[DOMAIN]["device_id"] = device.id
+    hass.data.setdefault(const.DOMAIN, {})
+    hass.data[const.DOMAIN] = {
+        "coordinator": coordinator,
+    }
+
 
     # create the default controller entities after controller flow creation.
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
@@ -42,4 +50,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     register_websockets(hass)
 
     return True
+
+
+
+class SprinkleCoordinator(DataUpdateCoordinator):
+
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, store):
+        super().__init__(hass, _LOGGER, name=DOMAIN)
 

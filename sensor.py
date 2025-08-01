@@ -7,7 +7,6 @@ import asyncio
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
 
     entity = TimedRunEntity("zone_1", "Front Yard", ["switch.valve_01", "switch.valve_02"])
-    hass.data[DOMAIN]["entities"].append(entity)
     async_add_entities([entity])
 
 

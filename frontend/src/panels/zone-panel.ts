@@ -1,17 +1,13 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { HomeAssistant } from '../types';
+import { HomeAssistant, Zone } from '../types';
 import {getValveName, getValveEntities, getValveIcon} from "../helpers";
 import {commonStyle} from "../style";
-
-interface Zone {
-  id: string;
-  name: string;
-  valves: string[];
-}
+import {SubscribeMixin} from "../subscribe-mixin";
+import {UnsubscribeFunc} from "home-assistant-js-websocket";
 
 @customElement('zone-panel')
-export class ZonePanel extends LitElement {
+export class ZonePanel extends SubscribeMixin(LitElement) {
 
     hass!: HomeAssistant;
 
@@ -20,6 +16,19 @@ export class ZonePanel extends LitElement {
     @state() private selectedValves: Set<string> = new Set();
     @state() private zoneDialogOpen: boolean = false;
     @state() private zoneNameInput: string = '';
+
+    protected hassSubscribe(): Array<UnsubscribeFunc | Promise<UnsubscribeFunc>> {
+        this.fetchData();
+        return [this.hass.connection.subscribeMessage(()=> this.fetchData(), {type: "sprinkle_update_listen"})]
+    }
+
+    private async fetchData() {
+        if(!this.hass) return;
+
+        //parse zones data.
+        this.hass.data[DOMAIN]
+
+    }
 
     static styles = commonStyle;
 
@@ -92,6 +101,14 @@ export class ZonePanel extends LitElement {
       this.zones = this.zones.map(z => z.id === newZone.id ? newZone : z);
     } else {
       this.zones = [...this.zones, newZone];
+
+      //call the api to create a zone on the backend.
+        this.hass.connection.sendMessagePromise({
+            type: "sprinkle/create_zone",
+            name: newZone.name,
+            valves: newZone.valves
+        })
+
     }
 
     this.closeZoneDialog();

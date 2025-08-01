@@ -1,27 +1,8 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { HomeAssistant } from './types';
+import { HomeAssistant, Cycle, CycleEntry, Schedule } from './types';
 import {commonStyle} from "./style";
 import "./panels/zone-panel"
-
-interface CycleEntry {
-  zoneId: string;
-  time: number;
-}
-
-interface Cycle {
-  id: string;
-  name: string;
-  entries: CycleEntry[];
-}
-
-interface Schedule {
-  id: string;
-  name: string;
-  days: string[];
-  times: string[];
-  cycleId: string;
-}
 
 @customElement('sprinkle-panel')
 export class SprinklePanel extends LitElement {
@@ -36,8 +17,10 @@ export class SprinklePanel extends LitElement {
   render() {
     return html`
         <zone-panel .hass="${this.hass}"></zone-panel>
+        ${this.hass.states}
     `
   }
+
 
 
   private addCycleEntry = () => {

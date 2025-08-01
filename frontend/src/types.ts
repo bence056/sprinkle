@@ -53,3 +53,31 @@ export interface HomeAssistant {
   ) => Promise<void>;
   callWS: <T>(msg: MessageBase) => Promise<T>;
 }
+
+export interface CycleEntry {
+  zoneId: string;
+  time: number;
+}
+
+export interface Cycle {
+  id: string;
+  name: string;
+  entries: CycleEntry[];
+}
+
+export interface Schedule {
+  id: string;
+  name: string;
+  days: string[];
+  times: string[];
+  cycleId: string;
+}
+
+
+export interface Zone {
+  id: string;
+  name: string;
+  valves: string[];
+}
+
+export

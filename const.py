@@ -12,3 +12,7 @@ PANEL_URL = "/api/panel_custom/sprinkle"
 PANEL_TITLE = NAME
 PANEL_ICON = "mdi:sprinkler-variant"
 PANEL_NAME = "sprinkle-panel"
+
+STORAGE_KEY = f"{DOMAIN}.storage"
+DATA_REGISTRY = f"{DOMAIN}_storage"
+STORAGE_VERSION = 1
