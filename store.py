@@ -91,6 +91,11 @@ class SprinkleStorage:
             return True
         return False
 
+    async def async_delete(self):
+        await self._store.async_remove()
+        self.zones = {}
+        self.save_key = -1
+
 
 async def async_get_registry(hass: HomeAssistant) -> SprinkleStorage:
     """Return the storage instance."""

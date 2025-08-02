@@ -1,3 +1,4 @@
+from homeassistant.components.frontend import async_remove_panel
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 import logging
@@ -60,4 +61,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     return True
 
-
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Integration removal cleanup"""
+    async_unregister_panel(hass)
+    coordinator: SprinkleCoordinator = hass.data[DOMAIN]["coordinator"]
+    await coordinator.async_delete_config()
+    del hass.data[DOMAIN]

@@ -146,3 +146,8 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         zone_serializable.rain_delay_end_time_seconds = int(zone_set[zone_id]["rain_delay_expire"].native_value.timestamp())
         self.store.async_queue_save()
 
+
+    async def async_delete_config(self):
+        """Wipe storage and config"""
+        await self.store.async_delete()
+
