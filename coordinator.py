@@ -107,3 +107,8 @@ class SprinkleCoordinator(DataUpdateCoordinator):
             device_registry.async_remove_device(device_id)
             #remove from store.
             self.store.remove_zone(zone_id)
+
+    def async_save_rain_delay_settings(self, rain_delay_expiry_entity: ZoneRainDelayExpiry):
+        pass
+        #We will save all entity data into hass.data[DOMAIN][zones]["entity_key"] for memory,
+        # and we will only call a save request when needed, the storage will parse itself.

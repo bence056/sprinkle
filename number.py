@@ -47,6 +47,7 @@ class RainDelayDurationNumber(NumberEntity):
         self._attr_native_step = 12
         self._attr_unit_of_measurement = UnitOfTime.HOURS
         self._attr_value = 0
+        self._assigned_expiry_entity = None
 
     @property
     def device_info(self):
@@ -58,5 +59,6 @@ class RainDelayDurationNumber(NumberEntity):
 
     async def async_set_native_value(self, value):
         self._attr_value = value
-
         self.async_write_ha_state()
+        if self._assigned_expiry_entity is not None:
+            self._assigned_expiry_entity.recalculate_next_time()
