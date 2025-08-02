@@ -5,7 +5,6 @@ import logging
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .websocket import register_websockets
 from .store import async_get_registry
-from .framework.zone import async_create_zone_device
 from .coordinator import SprinkleCoordinator
 
 from .const import DOMAIN, PLATFORMS
