@@ -20,7 +20,7 @@ class ZoneRunDurationNumber(NumberEntity):
         self._attr_min_value = 1
         self._attr_max_value = 60
         self._attr_step = 1
-        self._attr_unit_of_measurement = UnitOfTime.MINUTES
+        self._attr_native_unit_of_measurement = UnitOfTime.MINUTES
         self._attr_value = 5
 
     @property
@@ -45,7 +45,7 @@ class RainDelayDurationNumber(NumberEntity):
         self._attr_native_min_value = 0
         self._attr_native_max_value = 72  # hours
         self._attr_native_step = 12
-        self._attr_unit_of_measurement = UnitOfTime.HOURS
+        self._attr_native_unit_of_measurement = UnitOfTime.HOURS
         self._attr_value = 0
         self._assigned_expiry_entity = None
 

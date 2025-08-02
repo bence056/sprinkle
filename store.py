@@ -10,7 +10,7 @@ from .const import STORAGE_KEY, STORAGE_VERSION, DOMAIN, DATA_REGISTRY, SAVE_DEL
 from . import const
 from homeassistant.util import dt
 
-@attr.s(slots=True, frozen=True)
+@attr.s(slots=True, frozen=False)
 class SprinkleZone:
 
     zone_id = attr.field(type=str, default="")

@@ -99,6 +99,18 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         async_add_sensors([zone_status_entity, zone_next_schedule_entity, rain_delay_expiry])
         async_add_numbers([run_time_entity, rain_delay_time_entity])
 
+        #store them in hass.data for later reference.
+
+        zone_structure = {
+            "status": zone_status_entity,
+            "run_trigger": run_button_entity,
+            "run_timer": run_time_entity,
+            "rain_delay": rain_delay_time_entity,
+            "rain_delay_expire": rain_delay_expiry,
+            "next_schedule": zone_next_schedule_entity
+        }
+        self.hass.data[DOMAIN]["zones"][zone_id] = zone_structure
+
     async def async_delete_zone(self, zone_id: str):
         device_registry = async_get_device_registry(self.hass)
         device_id = await self.async_get_device_id_from_zone(zone_id)
@@ -108,7 +120,17 @@ class SprinkleCoordinator(DataUpdateCoordinator):
             #remove from store.
             self.store.remove_zone(zone_id)
 
-    def async_save_rain_delay_settings(self, rain_delay_expiry_entity: ZoneRainDelayExpiry):
-        pass
+    def async_save_zone_changes(self, zone_id: str):
         #We will save all entity data into hass.data[DOMAIN][zones]["entity_key"] for memory,
         # and we will only call a save request when needed, the storage will parse itself.
+        zone_set = self.hass.data[DOMAIN]["zones"]
+        if zone_id not in zone_set:
+            return
+        #Now we get a fresh data, parse it into the serializable object, and call save.
+        if zone_id not in self.store.zones:
+            return
+        zone_serializable: SprinkleZone = self.store.zones[zone_id]
+        zone_serializable.rain_delay_set_value = zone_set[zone_id]["rain_delay"].native_value
+        zone_serializable.rain_delay_end_time_seconds = int(zone_set[zone_id]["rain_delay_expire"].native_value.timestamp())
+        self.store.async_queue_save()
+

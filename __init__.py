@@ -33,7 +33,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         manufacturer=const.MANUFACTURER,
     )
 
-    hass.data.setdefault(const.DOMAIN, {})
+    hass.data.setdefault(const.DOMAIN, {
+        "coordinator": None,
+        "zones":{}
+    })
 
     # create the default controller entities after controller flow creation.
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

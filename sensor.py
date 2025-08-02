@@ -82,7 +82,7 @@ class ZoneRainDelayExpiry(SensorEntity):
         self._next_time = dt.now() + timedelta(hours=self._rain_delay_input_entity.native_value)
         self.async_write_ha_state()
         coordinator = self.hass.data[DOMAIN]["coordinator"]
-        coordinator.async_save_rain_delay_settings(self)
+        coordinator.async_save_zone_changes(self.zone_id)
 
     @property
     def zone_id(self):
