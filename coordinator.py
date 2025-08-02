@@ -97,7 +97,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
 
         async_add_buttons([run_button_entity])
         async_add_sensors([zone_status_entity, zone_next_schedule_entity, rain_delay_expiry])
-        async_add_numbers([rain_delay_time_entity])
+        async_add_numbers([run_time_entity, rain_delay_time_entity])
 
     async def async_delete_zone(self, zone_id: str):
         device_registry = async_get_device_registry(self.hass)
