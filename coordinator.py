@@ -58,7 +58,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         else:
             if zone_id in self.store.zones.keys():
                 #Modify zone
-                pass
+                await self.async_modify_zone(zone_id, data)
             else:
                 #Create new zone
                 await self.async_create_zone(zone_id, data)
@@ -66,7 +66,19 @@ class SprinkleCoordinator(DataUpdateCoordinator):
 
             homeassistant.helpers.dispatcher.async_dispatcher_send(self.hass, "sprinkle_update_dispatch")
 
-
+    async def async_modify_zone(self, zone_id: str, data: dict):
+        if const.ATTR_ZONE_VALVES not in data:
+            return
+        zone_set = self.hass.data[DOMAIN]["zones"]
+        if zone_id not in zone_set:
+            return
+        #edit the data on the toggle entity to represent new valves.
+        zone_toggle: ZoneStartRunButton = zone_set[zone_id]["run_trigger"]
+        zone_toggle.zone_valves = data[const.ATTR_ZONE_VALVES]
+        #Edit it in the serializable data as well.
+        zone_serializable: SprinkleZone = self.store.zones[zone_id]
+        zone_serializable.zone_valves = data[const.ATTR_ZONE_VALVES]
+        self.store.async_queue_save()
 
     async def async_create_zone(self, zone_id: str, data: dict):
         # Create zone requested

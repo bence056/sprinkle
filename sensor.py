@@ -20,7 +20,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
 class ZoneStatusSensor(SensorEntity):
     def __init__(self, zone_id, name, device_info):
-        self._attr_unique_id = f"{zone_id}_status"
+        self._attr_unique_id = f"{DOMAIN}_{zone_id}_status"
         self._attr_name = f"{name} Status"
         self._attr_icon = "mdi:valve"
         self._attr_device_info = device_info
@@ -44,7 +44,7 @@ class ZoneStatusSensor(SensorEntity):
 
 class ZoneNextScheduleSensor(SensorEntity):
     def __init__(self, zone_id, name, device_info):
-        self._attr_unique_id = f"{zone_id}_next_schedule"
+        self._attr_unique_id = f"{DOMAIN}_{zone_id}_next_schedule"
         self._attr_name = f"{name} Next Schedule"
         self._attr_device_info = device_info
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
@@ -61,7 +61,7 @@ class ZoneNextScheduleSensor(SensorEntity):
 
 class ZoneRainDelayExpiry(SensorEntity):
     def __init__(self, zone_id, name, device_info, rain_delay_input: RainDelayDurationNumber):
-        self._attr_unique_id = f"{zone_id}_expiry"
+        self._attr_unique_id = f"{DOMAIN}_{zone_id}_expiry"
         self._zone_id = zone_id
         self._attr_name = f"{name} Expiry"
         self._attr_device_info = device_info

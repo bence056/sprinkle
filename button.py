@@ -21,7 +21,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
 class ZoneStartRunButton(ButtonEntity):
     def __init__(self, zone_id, name, device_info, duration_entity, status_entity, zone_valves: list[str]):
-        self._attr_unique_id = f"{zone_id}_start_run"
+        self._attr_unique_id = f"{DOMAIN}_{zone_id}_start_run"
         self._attr_name = f"{name} Start Run"
         self._attr_device_info = device_info
         self._duration_entity = duration_entity
@@ -42,5 +42,14 @@ class ZoneStartRunButton(ButtonEntity):
         return {
             "assigned_valves": self._zone_valves
         }
+
+    @property
+    def zone_valves(self):
+        return self._zone_valves
+
+    @zone_valves.setter
+    def zone_valves(self, value):
+        self._zone_valves = value
+        self.async_write_ha_state()
 
 

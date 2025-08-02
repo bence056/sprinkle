@@ -5,7 +5,7 @@ import {getValveName, getValveEntities, getValveIcon} from "../helpers";
 import {commonStyle} from "../style";
 import {SubscribeMixin} from "../subscribe-mixin";
 import {UnsubscribeFunc} from "home-assistant-js-websocket";
-import {modifyZone, deleteZone as apiDeleteZone, getZones} from '../websockets'
+import {createZone, deleteZone as apiDeleteZone, getZones, modifyZoneValves} from '../websockets'
 
 @customElement('zone-panel')
 export class ZonePanel extends SubscribeMixin(LitElement) {
@@ -16,6 +16,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
     @state() private editingZone: Zone | null = null;
     @state() private selectedValves: Set<string> = new Set();
     @state() private zoneDialogOpen: boolean = false;
+    @state() private zoneDialogModifyOnly: boolean = false;
     @state() private zoneNameInput: string = '';
 
     protected hassSubscribe(): Array<UnsubscribeFunc | Promise<UnsubscribeFunc>> {
@@ -68,12 +69,14 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
     private openZoneDialog(zone: Zone | null) {
         this.editingZone = zone;
         this.zoneNameInput = zone?.zone_name || '';
+        if(zone) this.zoneDialogModifyOnly = true
         this.selectedValves = new Set(zone?.zone_valves || []);
         this.zoneDialogOpen = true;
     }
 
     private closeZoneDialog() {
         this.zoneDialogOpen = false;
+        this.zoneDialogModifyOnly = false;
         this.editingZone = null;
         this.zoneNameInput = '';
         this.selectedValves.clear();
@@ -93,23 +96,20 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
         if (!name || this.selectedValves.size === 0) return;
         if (!this.editingZone && this.zones.some(z => z.zone_name.toLowerCase() === name.toLowerCase())) return;
 
-        const newZone: Zone = {
+        if(this.zoneDialogModifyOnly && this.editingZone) {
+            modifyZoneValves(this.hass, this.editingZone.zone_id, Array.from(this.selectedValves)).then(() => {
+                console.log("API call finished");
+            });
+        }else {
+            const newZone: Zone = {
             zone_id: this.editingZone?.zone_id || crypto.randomUUID(),
             zone_name: name,
             zone_valves: Array.from(this.selectedValves),
         };
-
-        // if (this.editingZone) {
-        //     this.zones = this.zones.map(z => z.zone_id === newZone.zone_id ? newZone : z);
-        // } else {
-        //     this.zones = [...this.zones, newZone];
-        //
-        // }
-
-        //call the api to create a zone on the backend.
-        modifyZone(this.hass, newZone).then(()=> {
-            console.log("API call finished");
-        });
+            createZone(this.hass, newZone).then(() => {
+                console.log("API call finished");
+            });
+        }
 
         this.closeZoneDialog();
     };
@@ -130,6 +130,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
                             label="Zone Name"
                             .value=${this.zoneNameInput}
                             @input=${(e: Event) => this.zoneNameInput = (e.target as HTMLInputElement).value}
+                            ?disabled=${this.zoneDialogModifyOnly}
                     ></ha-textfield>
                     <div class="valve-checkboxes">
                         ${getValveEntities(this.hass).map(id => html`

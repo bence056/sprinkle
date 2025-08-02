@@ -14,7 +14,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
 class ZoneRunDurationNumber(NumberEntity):
     def __init__(self, zone_id, name, device_info):
-        self._attr_unique_id = f"{zone_id}_run_duration"
+        self._attr_unique_id = f"{DOMAIN}_{zone_id}_run_duration"
         self._attr_name = f"{name} Run Duration"
         self._attr_device_info = device_info
         self._attr_min_value = 1
@@ -39,7 +39,7 @@ class ZoneRunDurationNumber(NumberEntity):
 
 class RainDelayDurationNumber(NumberEntity):
     def __init__(self, zone_id, name, device_info):
-        self._attr_unique_id = f"{zone_id}_rain_delay_duration"
+        self._attr_unique_id = f"{DOMAIN}_{zone_id}_rain_delay_duration"
         self._attr_name = f"{name} Rain Delay Duration"
         self._attr_device_info = device_info
         self._attr_native_min_value = 0
