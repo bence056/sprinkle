@@ -73,15 +73,12 @@ class SprinkleZonesView(HomeAssistantView):
 
     async def post(self, request: Request, data):
         hass: HomeAssistant = request.app["hass"]
-        _LOGGER.info(f"Zone {"delete request" if data[const.ATTR_ZONE_DELETE] else "create/modify request"} - "
-                    f"zone ID: {data[const.ATTR_ZONE_ID]}"
-                    f"zone name: {data[const.ATTR_ZONE_NAME]}"
-                    f"valves: {data[const.ATTR_ZONE_VALVES]}")
+        coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
         if not data[const.ATTR_ZONE_DELETE]:
-            coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
-
             #Just add a device, will check later for existance and for modification requests.
             await coordinator.async_create_zone(data[const.ATTR_ZONE_NAME], data[const.ATTR_ZONE_ID], data[const.ATTR_ZONE_VALVES])
+        else:
+            await coordinator.async_delete_zone(data[const.ATTR_ZONE_ID])
 
 
 def register_websockets(hass: HomeAssistant):

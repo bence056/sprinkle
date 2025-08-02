@@ -9,15 +9,7 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
-
-def build_zone_device_info(zone_id: str, zone_name: str):
-    return {
-        "identifiers": {("sprinkler", zone_id)},
-        "name": zone_name,
-        "manufacturer": "bence056",
-        "model": "Sprinkle Virtual Irrigation",
-        "sw_version": VERSION
-    }
+from homeassistant.helpers.device_registry import async_get as async_get_device_registry
 
 class ZoneStatusSensor(SensorEntity):
     def __init__(self, zone_id, name, device_info):
@@ -90,7 +82,7 @@ class RainDelaySwitch(SwitchEntity):
         self._attr_unique_id = f"{zone_id}_rain_delay"
         self._attr_name = f"{name} Rain Delay"
         self._attr_device_info = device_info
-        self._enabled = True
+        self._enabled = False
 
     @property
     def device_info(self):
@@ -114,9 +106,9 @@ class RainDelayDurationNumber(NumberEntity):
         self._attr_unique_id = f"{zone_id}_rain_delay_duration"
         self._attr_name = f"{name} Rain Delay Duration"
         self._attr_device_info = device_info
-        self._attr_min_value = 12
-        self._attr_max_value = 72  # hours
-        self._attr_step = 12
+        self._attr_native_min_value = 12
+        self._attr_native_max_value = 72  # hours
+        self._attr_native_step = 12
         self._attr_unit_of_measurement = UnitOfTime.HOURS
         self._attr_value = 12
 
@@ -149,9 +141,8 @@ class ZoneNextScheduleSensor(SensorEntity):
         return self._next_time
 
 
-async def async_create_zone_device(hass: HomeAssistant, zone_name: str, zone_id: str, zone_valves: list[str]):
+async def async_create_zone_device(hass: HomeAssistant, zone_name: str, zone_id: str, zone_valves: list[str], device_info: dict):
 
-    device_info = build_zone_device_info(zone_id, zone_name)
     zone_status_entity = ZoneStatusSensor(zone_id, zone_name, device_info)
     run_time_entity = ZoneRunDurationNumber(zone_id, zone_name, device_info)
     run_button_entity = ZoneStartRunButton(zone_id, zone_name, device_info, run_time_entity, zone_status_entity)
@@ -160,9 +151,15 @@ async def async_create_zone_device(hass: HomeAssistant, zone_name: str, zone_id:
     zone_next_schedule_entity = ZoneNextScheduleSensor(zone_id, zone_name, device_info)
 
 
-    async_add_entities = hass.data[DOMAIN]["add_switch_entity"]
-    async_add_entities([rain_delay_switch_entity])
-#   async_add_entities([zone_status_entity, run_time_entity, run_button_entity, rain_delay_time_entity, rain_delay_switch_entity, zone_next_schedule_entity])
+    async_add_switches = hass.data[DOMAIN]["add_switch_entity"]
+    async_add_buttons = hass.data[DOMAIN]["add_button_entity"]
+    async_add_sensors = hass.data[DOMAIN]["add_sensor_entity"]
+    async_add_numbers = hass.data[DOMAIN]["add_number_entity"]
+
+    async_add_switches([rain_delay_switch_entity])
+    async_add_buttons([run_button_entity])
+    async_add_sensors([zone_status_entity, zone_next_schedule_entity])
+    async_add_numbers([rain_delay_time_entity])
 
 
 
