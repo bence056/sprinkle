@@ -17,6 +17,8 @@ STORAGE_KEY = f"{DOMAIN}.storage"
 DATA_REGISTRY = f"{DOMAIN}_storage"
 STORAGE_VERSION = 1
 
+PLATFORMS = ["sensor", "switch", "button", "number"]
+
 
 #Http attributes
 

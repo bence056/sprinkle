@@ -8,4 +8,4 @@ import asyncio
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
 
     #save the callback to the dataset for later use.
-    hass.data[DOMAIN]["add_sensor_entity"] = async_add_entities
+    hass.data[DOMAIN]["add_switch_entity"] = async_add_entities

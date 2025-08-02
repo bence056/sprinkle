@@ -8,6 +8,7 @@ from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 
 def build_zone_device_info(zone_id: str, zone_name: str):
     return {
@@ -158,8 +159,10 @@ async def async_create_zone_device(hass: HomeAssistant, zone_name: str, zone_id:
     rain_delay_switch_entity = RainDelaySwitch(zone_id, zone_name, device_info)
     zone_next_schedule_entity = ZoneNextScheduleSensor(zone_id, zone_name, device_info)
 
-    async_add_entities = hass.data[DOMAIN]["entity_registry"]
-    async_add_entities([zone_status_entity, run_time_entity, run_button_entity, rain_delay_time_entity, rain_delay_switch_entity, zone_next_schedule_entity])
+
+    async_add_entities = hass.data[DOMAIN]["add_switch_entity"]
+    async_add_entities([rain_delay_switch_entity])
+#   async_add_entities([zone_status_entity, run_time_entity, run_button_entity, rain_delay_time_entity, rain_delay_switch_entity, zone_next_schedule_entity])
 
 
 

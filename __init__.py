@@ -8,7 +8,7 @@ from .store import async_get_registry
 from .framework.zone import async_create_zone_device
 from .coordinator import SprinkleCoordinator
 
-from .const import DOMAIN
+from .const import DOMAIN, PLATFORMS
 from .panel import (
     async_register_panel,
     async_unregister_panel
@@ -44,7 +44,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
     # create the default controller entities after controller flow creation.
-    await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Setup the side panel.
     await async_register_panel(hass)
