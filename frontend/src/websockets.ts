@@ -1,18 +1,18 @@
 import {HomeAssistant, Zone} from "./types";
 
-export type ZoneRequest = {
-    zone_id: string;
-    zone_name: string;
-    zone_valves: string[];
-    zone_delete: boolean;
-}
-
-export const modifyZone = (hass: HomeAssistant, zone: Partial<ZoneRequest>) : Promise<boolean> => {
-    zone.zone_delete = false;
+export const modifyZone = (hass: HomeAssistant, zone: Partial<Zone>) : Promise<boolean> => {
     return hass.callApi('POST', 'sprinkle/zones', zone)
 }
 
-export const deleteZone = (hass: HomeAssistant, zone: Partial<ZoneRequest>) : Promise<boolean> => {
-    zone.zone_delete = true;
-    return hass.callApi('POST', 'sprinkle/zones', zone)
+export const deleteZone = (hass: HomeAssistant, zone_id: string) : Promise<boolean> => {
+    return hass.callApi('POST', 'sprinkle/zones', {
+        zone_id: zone_id,
+        zone_delete: true
+    })
+}
+
+export const getZones = (hass: HomeAssistant) : Promise<Zone[]> => {
+    return hass.callWS({
+        type: "sprinkle/get_zones"
+    })
 }

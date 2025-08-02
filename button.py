@@ -1,3 +1,5 @@
+from typing import Mapping, Any
+
 from homeassistant.components.button import ButtonEntity
 from homeassistant.helpers.entity import Entity, DeviceInfo
 from homeassistant.config_entries import ConfigEntry
@@ -5,10 +7,15 @@ from homeassistant.core import HomeAssistant
 from .const import DOMAIN
 import asyncio
 
+import logging
+
+_LOGGER = logging.getLogger(__name__)
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
 
     #save the callback to the dataset for later use.
     hass.data[DOMAIN]["add_button_entity"] = async_add_entities
+    _LOGGER.info("added to hass.data")
 
 
 
@@ -29,5 +36,11 @@ class ZoneStartRunButton(ButtonEntity):
         minutes = self._duration_entity.native_value
         self._status_entity.set_status("running")
         self._status_entity.set_status("idle")
+
+    @property
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
+        return {
+            "assigned_valves": self._zone_valves
+        }
 
 

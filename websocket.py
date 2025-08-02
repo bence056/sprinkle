@@ -1,3 +1,5 @@
+
+
 from homeassistant.components import websocket_api
 from homeassistant.components.websocket_api import websocket_command, async_register_command, async_response
 from homeassistant.core import callback, HomeAssistant
@@ -5,15 +7,12 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.http import HomeAssistantView
 from homeassistant.components.http.data_validator import RequestDataValidator
 from homeassistant.helpers import config_validation as cv
-from homeassistant.const import (
-    ATTR_DEVICE_ID,
-    ATTR_ENTITY_ID
-)
 from . import const
 from .coordinator import SprinkleCoordinator
 import voluptuous as vol
 import logging
 from aiohttp.web import Request
+import attr
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,6 +50,19 @@ async def handle_subscribe_updates(hass, connection, msg):
 def sprinkle_log(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
     _LOGGER.info("[Sprinkle log]: %s", msg["message"])
 
+
+
+@websocket_command(
+{
+    vol.Required("type"): "sprinkle/get_zones",
+})
+@async_response
+async def sprinkle_get_zones(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
+    response = [attr.asdict(z) for z in coordinator.store.zones.values()]
+    connection.send_result(msg["id"],  response)
+
+
 class SprinkleZonesView(HomeAssistantView):
 
     url = "/api/sprinkle/zones"
@@ -74,14 +86,18 @@ class SprinkleZonesView(HomeAssistantView):
     async def post(self, request: Request, data):
         hass: HomeAssistant = request.app["hass"]
         coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
-        if not data[const.ATTR_ZONE_DELETE]:
-            #Just add a device, will check later for existance and for modification requests.
-            await coordinator.async_create_zone(data[const.ATTR_ZONE_NAME], data[const.ATTR_ZONE_ID], data[const.ATTR_ZONE_VALVES])
-        else:
-            await coordinator.async_delete_zone(data[const.ATTR_ZONE_ID])
+
+        await coordinator.async_update_zone_config(data[const.ATTR_ZONE_ID], data)
+
+        # if const.ATTR_ZONE_DELETE in data:
+        #     await coordinator.async_delete_zone(data[const.ATTR_ZONE_ID])
+        # else:
+        #     #Just add a device, will check later for existence and for modification requests.
+        #     await coordinator.async_create_zone(data[const.ATTR_ZONE_NAME], data[const.ATTR_ZONE_ID], data[const.ATTR_ZONE_VALVES])
 
 
 def register_websockets(hass: HomeAssistant):
-    async_register_command(hass, sprinkle_log)
     async_register_command(hass, handle_subscribe_updates)
+    async_register_command(hass, sprinkle_log)
+    async_register_command(hass, sprinkle_get_zones)
     hass.http.register_view(SprinkleZonesView)

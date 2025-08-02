@@ -75,7 +75,7 @@ export interface Schedule {
 
 
 export interface Zone {
-  id: string;
-  name: string;
-  valves: string[];
+  zone_id: string;
+  zone_name: string;
+  zone_valves: string[];
 }

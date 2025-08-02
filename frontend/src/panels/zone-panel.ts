@@ -5,7 +5,7 @@ import {getValveName, getValveEntities, getValveIcon, zoneNameToId} from "../hel
 import {commonStyle} from "../style";
 import {SubscribeMixin} from "../subscribe-mixin";
 import {UnsubscribeFunc} from "home-assistant-js-websocket";
-import {modifyZone, deleteZone as apiDeleteZone, ZoneRequest} from '../websockets'
+import {modifyZone, deleteZone as apiDeleteZone, getZones} from '../websockets'
 
 @customElement('zone-panel')
 export class ZonePanel extends SubscribeMixin(LitElement) {
@@ -26,8 +26,9 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
     private async fetchData() {
         if(!this.hass) return;
 
-        //parse zones data.
-
+           this.zones = await getZones(this.hass);
+           console.log(this.zones)
+           this.requestUpdate();
 
     }
 
@@ -40,9 +41,9 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
                     ${this.zones.map(zone => html`
                         <ha-card>
                             <div class="zone-entry">
-                                <div><strong>${zone.name}</strong></div>
+                                <div><strong>${zone.zone_name}</strong></div>
                                 <div class="zone-valves">
-                                    ${zone.valves.map(valveId => html`
+                                    ${zone.zone_valves.map(valveId => html`
                                         <div class="zone-valve-item">
                                             <ha-icon icon=${getValveIcon(this.hass, valveId)}></ha-icon>
                                             ${getValveName(this.hass, valveId)}
@@ -51,7 +52,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
                                 </div>
                                 <div class="zone-actions">
                                     <ha-button @click=${() => this.openZoneDialog(zone)}>Modify</ha-button>
-                                    <ha-button @click=${() => this.deleteZone(zone.id)}>Delete</ha-button>
+                                    <ha-button @click=${() => this.deleteZone(zone.zone_id)}>Delete</ha-button>
                                 </div>
                             </div>
                         </ha-card>
@@ -66,8 +67,8 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
 
     private openZoneDialog(zone: Zone | null) {
         this.editingZone = zone;
-        this.zoneNameInput = zone?.name || '';
-        this.selectedValves = new Set(zone?.valves || []);
+        this.zoneNameInput = zone?.zone_name || '';
+        this.selectedValves = new Set(zone?.zone_valves || []);
         this.zoneDialogOpen = true;
     }
 
@@ -90,28 +91,23 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
     private saveZone = () => {
         const name = this.zoneNameInput.trim();
         if (!name || this.selectedValves.size === 0) return;
-        if (!this.editingZone && this.zones.some(z => z.name.toLowerCase() === name.toLowerCase())) return;
+        if (!this.editingZone && this.zones.some(z => z.zone_name.toLowerCase() === name.toLowerCase())) return;
 
         const newZone: Zone = {
-            id: this.editingZone?.id || zoneNameToId(name),
-            name,
-            valves: Array.from(this.selectedValves),
+            zone_id: this.editingZone?.zone_id || zoneNameToId(name),
+            zone_name: name,
+            zone_valves: Array.from(this.selectedValves),
         };
 
-        if (this.editingZone) {
-            this.zones = this.zones.map(z => z.id === newZone.id ? newZone : z);
-        } else {
-            this.zones = [...this.zones, newZone];
-
-        }
+        // if (this.editingZone) {
+        //     this.zones = this.zones.map(z => z.zone_id === newZone.zone_id ? newZone : z);
+        // } else {
+        //     this.zones = [...this.zones, newZone];
+        //
+        // }
 
         //call the api to create a zone on the backend.
-        let zoneData: Partial<ZoneRequest> = {
-            zone_id: newZone.id,
-            zone_name: newZone.name,
-            zone_valves: newZone.valves,
-        }
-        modifyZone(this.hass, zoneData).then(()=> {
+        modifyZone(this.hass, newZone).then(()=> {
             console.log("API call finished");
         });
 
@@ -119,11 +115,8 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
     };
 
     private deleteZone = (id: string) => {
-        this.zones = this.zones.filter(z => z.id !== id);
-        let zoneData: Partial<ZoneRequest> = {
-            zone_id: id
-        }
-        apiDeleteZone(this.hass, zoneData).then(()=> {
+        this.zones = this.zones.filter(z => z.zone_id !== id);
+        apiDeleteZone(this.hass, id).then(()=> {
             console.log("API call finished");
         });
     };

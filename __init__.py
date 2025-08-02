@@ -22,9 +22,6 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
-    store_obj = await async_get_registry(hass)
-    coordinator = SprinkleCoordinator(hass, entry, store_obj)
-
     # Create the controller device
     device_registry = async_get_device_registry(hass)
     device = device_registry.async_get_or_create(
@@ -37,18 +34,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     hass.data.setdefault(const.DOMAIN, {})
-    hass.data[const.DOMAIN] = {
-        "coordinator": coordinator
-    }
-
 
     # create the default controller entities after controller flow creation.
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    store_obj = await async_get_registry(hass)
+    coordinator = SprinkleCoordinator(hass, entry, store_obj)
+
+    hass.data[const.DOMAIN]["coordinator"] = coordinator
+
+    await coordinator.load_entities()
+
+
 
     # Setup the side panel.
     await async_register_panel(hass)
     #Register the websockets.
     register_websockets(hass)
+
+    #load the saved config from storage and create entities.
+
 
     return True
 

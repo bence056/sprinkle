@@ -42,11 +42,11 @@ class RainDelayDurationNumber(NumberEntity):
         self._attr_unique_id = f"{zone_id}_rain_delay_duration"
         self._attr_name = f"{name} Rain Delay Duration"
         self._attr_device_info = device_info
-        self._attr_native_min_value = 12
+        self._attr_native_min_value = 0
         self._attr_native_max_value = 72  # hours
         self._attr_native_step = 12
         self._attr_unit_of_measurement = UnitOfTime.HOURS
-        self._attr_value = 12
+        self._attr_value = 0
 
     @property
     def device_info(self):
@@ -58,4 +58,5 @@ class RainDelayDurationNumber(NumberEntity):
 
     async def async_set_native_value(self, value):
         self._attr_value = value
+
         self.async_write_ha_state()
