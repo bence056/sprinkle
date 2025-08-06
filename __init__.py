@@ -36,7 +36,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(const.DOMAIN, {
         "coordinator": None,
-        "zones":{}
+        "zones":{},
+        "cycles": {}
     })
 
     # create the default controller entities after controller flow creation.

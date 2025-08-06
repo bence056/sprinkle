@@ -4,7 +4,7 @@ import { HomeAssistant, Cycle, CycleStep } from '../types';
 import { commonStyle } from "../style";
 import { SubscribeMixin } from "../subscribe-mixin";
 import { UnsubscribeFunc } from "home-assistant-js-websocket";
-import { getCycles, getZones } from "../websockets";
+import { getCycles, getZones, createCycle, modifyCycle, deleteCycle } from "../websockets";
 import { getValveName } from "../helpers";
 
 @customElement('cycle-panel')
@@ -26,9 +26,11 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
     }
 
     private async fetchData() {
-        // this.cycles = await getCycles(this.hass);
+        this.cycles = await getCycles(this.hass);
+        console.log(this.cycles);
         const zones = await getZones(this.hass);
         this.availableZones = zones.map(z => ({ id: z.zone_id, name: z.zone_name }));
+        console.log(this.hass.states);
         this.requestUpdate();
     }
 
@@ -64,7 +66,10 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
                                 <div class="zone-valves">
                                     ${cycle.cycle_steps.map(step => html`
                                         <div class="zone-valve-item">
-                                            ${getValveName(this.hass, step.zone_id)} - ${step.zone_minutes} min
+                                            <ha-icon icon="mdi:grass"></ha-icon>
+                                                ${this.availableZones.find((z) => z.id === step.zone_id)?.name || "N/A"}:
+                                            <ha-icon icon="mdi:timer-marker-outline"></ha-icon>
+                                                ${step.zone_minutes} min
                                         </div>
                                     `)}
                                 </div>
@@ -136,11 +141,12 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
             cycle_name: name,
             cycle_steps: this.currentSteps,
         };
-        console.log(newCycle);
         if (this.cycleDialogModifyOnly && this.editingCycle) {
-            // Call your backend to modify the existing cycle
+            // Call backend to modify cycle
+            modifyCycle(this.hass, this.editingCycle).then(()=>{console.log("Cycle API call sent!")});
         } else {
-            // Call your backend to create new cycle
+            // Call backend to create new cycle
+            createCycle(this.hass, newCycle).then(()=>{console.log("Cycle API call sent!")});
         }
 
         this.closeCycleDialog();
@@ -148,7 +154,8 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
 
     private deleteCycle(id: string) {
         this.cycles = this.cycles.filter(c => c.cycle_id !== id);
-        // Call your backend to delete the cycle
+        // Call backend to delete the cycle
+        deleteCycle(this.hass, id).then(()=>{console.log("Cycle API call sent!")});
     }
 
     private renderCycleDialog() {

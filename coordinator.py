@@ -5,7 +5,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
-from .button import ZoneStartRunButton
+from .button import ZoneStartRunButton, CycleStartRunButton
 from .const import DOMAIN, VERSION
 from homeassistant.util import dt
 from . import const
@@ -13,7 +13,7 @@ import logging
 
 from .number import ZoneRunDurationNumber, RainDelayDurationNumber
 from .sensor import ZoneStatusSensor, ZoneNextScheduleSensor, ZoneRainDelayExpiry
-from .store import SprinkleStorage, SprinkleZone
+from .store import SprinkleStorage, SprinkleZone, SprinkleCycleStep
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,6 +29,8 @@ class SprinkleCoordinator(DataUpdateCoordinator):
     async def load_entities(self):
         for key,value in self.store.zones.items():
             await self.async_create_zone(key, attr.asdict(value))
+        for key,value in self.store.cycles.items():
+            await self.async_create_cycle(key, attr.asdict(value))
 
 
 
@@ -41,9 +43,27 @@ class SprinkleCoordinator(DataUpdateCoordinator):
             "sw_version": VERSION
         }
 
+
+    def build_cycle_device_info(self, cycle_id: str, cycle_name: str):
+        return {
+            "identifiers": {(DOMAIN, cycle_id)},
+            "name": cycle_name,
+            "manufacturer": "bence056",
+            "model": "Sprinkle Virtual Irrigation",
+            "sw_version": VERSION
+        }
+
     async def async_get_device_id_from_zone(self, zone_id: str) -> str | None:
         dev_reg = async_get_device_registry(self.hass)
         identifier = (DOMAIN, zone_id)
+        for device in dev_reg.devices.values():
+            if identifier in device.identifiers:
+                return device.id
+        return None
+
+    async def async_get_device_id_from_cycle(self, cycle_id: str) -> str | None:
+        dev_reg = async_get_device_registry(self.hass)
+        identifier = (DOMAIN, cycle_id)
         for device in dev_reg.devices.values():
             if identifier in device.identifiers:
                 return device.id
@@ -71,7 +91,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
             # Delete zone requested
             await self.async_delete_cycle(cycle_id)
         else:
-            if cycle_id in self.store.zones.keys():
+            if cycle_id in self.store.cycles.keys():
                 # Modify zone
                 await self.async_modify_cycle(cycle_id, data)
             else:
@@ -162,6 +182,42 @@ class SprinkleCoordinator(DataUpdateCoordinator):
 
     async def async_create_cycle(self, cycle_id: str, data: dict):
 
+        cycle_name = data[const.ATTR_CYCLE_NAME]
+        cycle_steps: data[const.ATTR_CYCLE_STEPS]
+
+        device_info = self.build_cycle_device_info(cycle_id, cycle_name)
+
+        cycle_obj = self.store.create_or_modify_cycle(data)
+
+        cycle_run_entity = CycleStartRunButton(cycle_id, cycle_name, device_info, cycle_obj.cycle_steps)
+
+        async_add_buttons = self.hass.data[DOMAIN]["add_button_entity"]
+        async_add_buttons([cycle_run_entity])
+
+        # store them in hass.data for later reference.
+
+        cycle_structure = {
+            "run_trigger": cycle_run_entity,
+        }
+        self.hass.data[DOMAIN]["cycles"][cycle_id] = cycle_structure
+
+    async def async_modify_cycle(self, cycle_id: str, data: dict):
+        cycle_set = self.hass.data[DOMAIN]["cycles"]
+        if cycle_id not in cycle_set:
+            return
+        edited_cycle = self.store.create_or_modify_cycle(data)
+        #update entity data as well.
+        cycle_run_entity: CycleStartRunButton = cycle_set[cycle_id]["run_trigger"]
+        cycle_run_entity._cycle_steps = edited_cycle.cycle_steps
+
+    async def async_delete_cycle(self, cycle_id: str):
+        device_registry = async_get_device_registry(self.hass)
+        device_id = await self.async_get_device_id_from_cycle(cycle_id)
+        _LOGGER.info(device_id)
+        if device_id is not None:
+            device_registry.async_remove_device(device_id)
+            #remove from store.
+            self.store.remove_cycle(cycle_id)
 
 
     async def async_delete_config(self):
