@@ -63,6 +63,20 @@ class SprinkleCoordinator(DataUpdateCoordinator):
                 #Create new zone
                 await self.async_create_zone(zone_id, data)
 
+            homeassistant.helpers.dispatcher.async_dispatcher_send(self.hass, "sprinkle_update_dispatch")
+
+    async def async_update_cycle_config(self, cycle_id: str, data: dict):
+
+        if const.ATTR_CYCLE_DELETE in data:
+            # Delete zone requested
+            await self.async_delete_cycle(cycle_id)
+        else:
+            if cycle_id in self.store.zones.keys():
+                # Modify zone
+                await self.async_modify_cycle(cycle_id, data)
+            else:
+                # Create new zone
+                await self.async_create_cycle(cycle_id, data)
 
             homeassistant.helpers.dispatcher.async_dispatcher_send(self.hass, "sprinkle_update_dispatch")
 
@@ -145,6 +159,9 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         zone_serializable.rain_delay_set_value = zone_set[zone_id]["rain_delay"].native_value
         zone_serializable.rain_delay_end_time_seconds = int(zone_set[zone_id]["rain_delay_expire"].native_value.timestamp())
         self.store.async_queue_save()
+
+    async def async_create_cycle(self, cycle_id: str, data: dict):
+
 
 
     async def async_delete_config(self):

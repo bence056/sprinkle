@@ -63,6 +63,17 @@ async def sprinkle_get_zones(hass: HomeAssistant, connection: websocket_api.Acti
     connection.send_result(msg["id"],  response)
 
 
+@websocket_command(
+{
+    vol.Required("type"): "sprinkle/get_cycles",
+})
+@async_response
+async def sprinkle_get_cycles(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
+    response = [attr.asdict(c) for c in coordinator.store.cycles.values()]
+    connection.send_result(msg["id"],  response)
+
+
 class SprinkleZonesView(HomeAssistantView):
 
     url = "/api/sprinkle/zones"
@@ -89,15 +100,34 @@ class SprinkleZonesView(HomeAssistantView):
 
         await coordinator.async_update_zone_config(data[const.ATTR_ZONE_ID], data)
 
-        # if const.ATTR_ZONE_DELETE in data:
-        #     await coordinator.async_delete_zone(data[const.ATTR_ZONE_ID])
-        # else:
-        #     #Just add a device, will check later for existence and for modification requests.
-        #     await coordinator.async_create_zone(data[const.ATTR_ZONE_NAME], data[const.ATTR_ZONE_ID], data[const.ATTR_ZONE_VALVES])
 
+class SprinkleCyclesView(HomeAssistantView):
+
+    url = "/api/sprinkle/cycles"
+    name = "api:sprinkle:cycles"
+
+    @RequestDataValidator(
+        vol.Schema(
+            {
+                vol.Required(const.ATTR_CYCLE_ID): cv.string,
+                vol.Optional(const.ATTR_CYCLE_DELETE): cv.boolean,
+                vol.Optional(const.ATTR_CYCLE_NAME): cv.string,
+                vol.Optional(const.ATTR_CYCLE_STEPS): cv.ensure_list
+
+            }
+        )
+    )
+
+    async def post(self, request: Request, data):
+        hass: HomeAssistant = request.app["hass"]
+        coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
+
+        await coordinator.async_update_cycle_config(data[const.ATTR_CYCLE_ID], data)
 
 def register_websockets(hass: HomeAssistant):
     async_register_command(hass, handle_subscribe_updates)
     async_register_command(hass, sprinkle_log)
     async_register_command(hass, sprinkle_get_zones)
+    async_register_command(hass, sprinkle_get_cycles)
     hass.http.register_view(SprinkleZonesView)
+    hass.http.register_view(SprinkleCyclesView)

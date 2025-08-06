@@ -54,17 +54,6 @@ export interface HomeAssistant {
   callWS: <T>(msg: MessageBase) => Promise<T>;
 }
 
-export interface CycleEntry {
-  zoneId: string;
-  time: number;
-}
-
-export interface Cycle {
-  id: string;
-  name: string;
-  entries: CycleEntry[];
-}
-
 export interface Schedule {
   id: string;
   name: string;
@@ -78,4 +67,15 @@ export interface Zone {
   zone_id: string;
   zone_name: string;
   zone_valves: string[];
+}
+
+export interface Cycle {
+    cycle_id: string;
+    cycle_name: string;
+    cycle_steps: CycleStep[];
+}
+
+export interface CycleStep {
+    zone_id: string;
+    zone_minutes: number;
 }

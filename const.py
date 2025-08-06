@@ -29,3 +29,8 @@ ATTR_ZONE_VALVES = "zone_valves"
 ATTR_ZONE_DELETE = "zone_delete"
 ATTR_RAIN_DELAY_CURRENT_SETTING = "rain_delay_set_value"
 ATTR_RAIN_DELAY_END_TIME_SECONDS = "rain_delay_end_time_seconds"
+
+ATTR_CYCLE_ID = "cycle_id"
+ATTR_CYCLE_NAME = "cycle_name"
+ATTR_CYCLE_STEPS = "cycle_steps"
+ATTR_CYCLE_DELETE = "cycle_delete"

@@ -28,7 +28,6 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
         if(!this.hass) return;
 
            this.zones = await getZones(this.hass);
-           console.log(this.zones)
            this.requestUpdate();
 
     }
