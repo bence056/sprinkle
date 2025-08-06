@@ -2,6 +2,7 @@ from datetime import timedelta
 from typing import Mapping, Any
 
 from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
+from homeassistant.const import UnitOfTime
 from homeassistant.helpers.entity import Entity, DeviceInfo
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -91,3 +92,25 @@ class ZoneRainDelayExpiry(SensorEntity):
     @property
     def rain_delay_input_entity(self):
         return self._rain_delay_input_entity
+
+
+
+class CycleRemainingMinutes(SensorEntity):
+    def __init__(self, cycle_id, name, device_info):
+        self._attr_unique_id = f"{DOMAIN}_{cycle_id}_remaining_minutes"
+        self._cycle_id = cycle_id
+        self._attr_name = f"{name} Remaining Minutes"
+        self._attr_device_info = device_info
+        self._remaining_minutes = 3
+
+    @property
+    def device_info(self):
+        return self._attr_device_info
+
+    @property
+    def native_value(self):
+        return self._remaining_minutes
+
+    @property
+    def native_unit_of_measurement(self):
+        return UnitOfTime.MINUTES

@@ -12,7 +12,7 @@ from . import const
 import logging
 
 from .number import ZoneRunDurationNumber, RainDelayDurationNumber
-from .sensor import ZoneStatusSensor, ZoneNextScheduleSensor, ZoneRainDelayExpiry
+from .sensor import ZoneStatusSensor, ZoneNextScheduleSensor, ZoneRainDelayExpiry, CycleRemainingMinutes
 from .store import SprinkleStorage, SprinkleZone, SprinkleCycleStep
 
 _LOGGER = logging.getLogger(__name__)
@@ -190,14 +190,18 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         cycle_obj = self.store.create_or_modify_cycle(data)
 
         cycle_run_entity = CycleStartRunButton(cycle_id, cycle_name, device_info, cycle_obj.cycle_steps)
+        cycle_remaining_time_entity = CycleRemainingMinutes(cycle_id, cycle_name, device_info)
 
         async_add_buttons = self.hass.data[DOMAIN]["add_button_entity"]
+        async_add_sensors = self.hass.data[DOMAIN]["add_sensor_entity"]
         async_add_buttons([cycle_run_entity])
+        async_add_sensors([cycle_remaining_time_entity])
 
         # store them in hass.data for later reference.
 
         cycle_structure = {
             "run_trigger": cycle_run_entity,
+            "remaining_minutes": cycle_remaining_time_entity
         }
         self.hass.data[DOMAIN]["cycles"][cycle_id] = cycle_structure
 
