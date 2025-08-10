@@ -13,7 +13,7 @@ import logging
 
 from .number import ZoneRunDurationNumber, RainDelayDurationNumber
 from .sensor import ZoneStatusSensor, ZoneNextScheduleSensor, RainDelayExpiry, CycleRemainingMinutes
-from .store import SprinkleStorage, SprinkleZone, SprinkleCycleStep
+from .store import SprinkleStorage, SprinkleZone, SprinkleCycleStep, SprinkleCycle
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -120,14 +120,14 @@ class SprinkleCoordinator(DataUpdateCoordinator):
     async def async_update_cycle_config(self, cycle_id: str, data: dict):
 
         if const.ATTR_CYCLE_DELETE in data:
-            # Delete zone requested
+            # Delete cycle requested
             await self.async_delete_cycle(cycle_id)
         else:
             if cycle_id in self.store.cycles.keys():
-                # Modify zone
+                # Modify cycle
                 await self.async_modify_cycle(cycle_id, data)
             else:
-                # Create new zone
+                # Create new cycle
                 await self.async_create_cycle(cycle_id, data)
 
             homeassistant.helpers.dispatcher.async_dispatcher_send(self.hass, "sprinkle_update_dispatch")
@@ -186,6 +186,37 @@ class SprinkleCoordinator(DataUpdateCoordinator):
             device_registry.async_remove_device(device_id)
             #remove from store.
             self.store.remove_zone(zone_id)
+
+            #check if there are cycles that contain this zone.
+            cycle_set = self.hass.data[DOMAIN]["cycles"]
+            cycles_to_delete: list[str] = []
+            store_modified = False
+            for key,value in self.store.cycles.items():
+
+                to_remove: list[SprinkleCycleStep] = []
+                for cycle_step in value.cycle_steps:
+                    if cycle_step.zone_id == zone_id:
+                        to_remove.append(cycle_step)
+
+                for rem in to_remove:
+                    value.cycle_steps.remove(rem)
+                    store_modified = True
+
+                #if a cycle has no steps left, mark it for removal.
+                if len(value.cycle_steps) == 0:
+                    cycles_to_delete.append(value.cycle_id)
+
+                #check if we actually removed some zones from the list, if we did, we can follow up with the next modification.
+                if len(to_remove) > 0:
+                    cycle_run_entity: CycleStartRunButton = cycle_set[value.cycle_id]["run_trigger"]
+                    cycle_run_entity._cycle_steps = value.cycle_steps
+
+            if store_modified:
+                self.store.async_queue_save()
+
+            for cycle_id in cycles_to_delete:
+                await self.async_delete_cycle(cycle_id)
+
 
 
     async def async_create_cycle(self, cycle_id: str, data: dict):
