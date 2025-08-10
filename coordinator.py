@@ -115,7 +115,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
                 #Create new zone
                 await self.async_create_zone(zone_id, data)
 
-            homeassistant.helpers.dispatcher.async_dispatcher_send(self.hass, "sprinkle_update_dispatch")
+        homeassistant.helpers.dispatcher.async_dispatcher_send(self.hass, "sprinkle_update_dispatch")
 
     async def async_update_cycle_config(self, cycle_id: str, data: dict):
 
@@ -130,7 +130,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
                 # Create new cycle
                 await self.async_create_cycle(cycle_id, data)
 
-            homeassistant.helpers.dispatcher.async_dispatcher_send(self.hass, "sprinkle_update_dispatch")
+        homeassistant.helpers.dispatcher.async_dispatcher_send(self.hass, "sprinkle_update_dispatch")
 
     async def async_modify_zone(self, zone_id: str, data: dict):
         if const.ATTR_ZONE_VALVES not in data:
