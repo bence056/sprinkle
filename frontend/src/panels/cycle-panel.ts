@@ -89,7 +89,7 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
 
     private openCycleDialog(cycle: Cycle | null) {
         this.editingCycle = cycle;
-        this.cycleDialogModifyOnly = !!cycle;
+        if(cycle) this.cycleDialogModifyOnly = true;
         this.cycleNameInput = cycle?.cycle_name || '';
         this.currentSteps = [...(cycle?.cycle_steps || [])];
         this.cycleDialogOpen = true;
@@ -137,12 +137,12 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
 
         const newCycle: Cycle = {
             cycle_id: this.editingCycle?.cycle_id || crypto.randomUUID(),
-            cycle_name: name,
+            cycle_name: this.editingCycle?.cycle_name || name,
             cycle_steps: this.currentSteps,
         };
         if (this.cycleDialogModifyOnly && this.editingCycle) {
             // Call backend to modify cycle
-            modifyCycle(this.hass, this.editingCycle).then(()=>{console.log("Cycle API call sent!")});
+            modifyCycle(this.hass, newCycle).then(()=>{console.log("Cycle API call sent!")});
         } else {
             // Call backend to create new cycle
             createCycle(this.hass, newCycle).then(()=>{console.log("Cycle API call sent!")});
