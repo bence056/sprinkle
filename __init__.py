@@ -34,8 +34,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         manufacturer=const.MANUFACTURER,
     )
 
+
     hass.data.setdefault(const.DOMAIN, {
         "coordinator": None,
+        "config": {},
         "zones":{},
         "cycles": {}
     })

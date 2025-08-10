@@ -4,11 +4,14 @@ from homeassistant.components.button import ButtonEntity
 from homeassistant.helpers.entity import Entity, DeviceInfo
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from . import SprinkleCoordinator
 from .const import DOMAIN
 import asyncio
 
 import logging
 
+from .number import RainDelayDurationNumber
+from .sensor import RainDelayExpiry
 from .store import SprinkleCycleStep
 
 _LOGGER = logging.getLogger(__name__)
@@ -53,6 +56,24 @@ class ZoneStartRunButton(ButtonEntity):
     def zone_valves(self, value):
         self._zone_valves = value
         self.async_write_ha_state()
+
+class RainDelaySetterButton(ButtonEntity):
+    def __init__(self, device_info, rain_delay_value_entity: RainDelayDurationNumber, rain_delay_expiry_entity: RainDelayExpiry):
+        self._attr_unique_id = f"{DOMAIN}_activate_rain_delay"
+        self._attr_name = f"Activate Rain Delay"
+        self._attr_device_info = device_info
+        self._rain_delay_value = rain_delay_value_entity
+        self._rain_delay_expiry = rain_delay_expiry_entity
+
+    @property
+    def device_info(self):
+        return self._attr_device_info
+
+    async def async_press(self):
+        hours = self._rain_delay_value.native_value
+        self._rain_delay_expiry.recalculate_next_time(hours)
+        coordinator: SprinkleCoordinator = self.hass.data[DOMAIN]["coordinator"]
+        await coordinator.async_update_rain_delay_expiry(self._rain_delay_expiry.native_value)
 
 
 class CycleStartRunButton(ButtonEntity):

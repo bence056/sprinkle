@@ -5,14 +5,14 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
-from .button import ZoneStartRunButton, CycleStartRunButton
+from .button import ZoneStartRunButton, CycleStartRunButton, RainDelaySetterButton
 from .const import DOMAIN, VERSION
 from homeassistant.util import dt
 from . import const
 import logging
 
 from .number import ZoneRunDurationNumber, RainDelayDurationNumber
-from .sensor import ZoneStatusSensor, ZoneNextScheduleSensor, ZoneRainDelayExpiry, CycleRemainingMinutes
+from .sensor import ZoneStatusSensor, ZoneNextScheduleSensor, RainDelayExpiry, CycleRemainingMinutes
 from .store import SprinkleStorage, SprinkleZone, SprinkleCycleStep
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,10 +27,31 @@ class SprinkleCoordinator(DataUpdateCoordinator):
 
 
     async def load_entities(self):
+
+        await self.async_create_config_entities()
+
         for key,value in self.store.zones.items():
             await self.async_create_zone(key, attr.asdict(value))
         for key,value in self.store.cycles.items():
             await self.async_create_cycle(key, attr.asdict(value))
+
+    def async_create_config_entities(self):
+
+        device_info = {
+            "identifiers": {(DOMAIN, self.entry.unique_id)},
+            "name": const.NAME,
+            "model": const.NAME,
+            "sw_version": const.VERSION,
+            "manufacturer": const.MANUFACTURER
+        }
+
+        async_add_buttons = self.hass.data[DOMAIN]["add_button_entity"]
+        async_add_sensors = self.hass.data[DOMAIN]["add_sensor_entity"]
+        async_add_numbers = self.hass.data[DOMAIN]["add_number_entity"]
+
+        rain_delay_number_entity = RainDelayDurationNumber(device_info)
+        rain_delay_expiry_entity = RainDelayExpiry(device_info, )
+        rain_delay_setter_entity = RainDelaySetterButton(device_info, rain_delay_number_entity, rain_delay_expiry_entity)
 
 
 
@@ -39,7 +60,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
             "identifiers": {(DOMAIN, zone_id)},
             "name": zone_name,
             "manufacturer": "bence056",
-            "model": "Sprinkle Virtual Irrigation",
+            "model": "Sprinkle Zone",
             "sw_version": VERSION
         }
 
@@ -49,7 +70,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
             "identifiers": {(DOMAIN, cycle_id)},
             "name": cycle_name,
             "manufacturer": "bence056",
-            "model": "Sprinkle Virtual Irrigation",
+            "model": "Sprinkle Cycle",
             "sw_version": VERSION
         }
 
@@ -123,18 +144,9 @@ class SprinkleCoordinator(DataUpdateCoordinator):
 
         zone_status_entity = ZoneStatusSensor(zone_id, zone_name, device_info)
         run_time_entity = ZoneRunDurationNumber(zone_id, zone_name, device_info)
-        run_button_entity = ZoneStartRunButton(zone_id, zone_name, device_info, run_time_entity, zone_status_entity,
-                                               zone_valves)
-        rain_delay_time_entity = RainDelayDurationNumber(zone_id, zone_name, device_info)
-        if const.ATTR_RAIN_DELAY_CURRENT_SETTING in data:
-            rain_delay_time_entity._attr_value = data[const.ATTR_RAIN_DELAY_CURRENT_SETTING]
-        rain_delay_expiry = ZoneRainDelayExpiry(zone_id, zone_name, device_info, rain_delay_time_entity)
-        if const.ATTR_RAIN_DELAY_END_TIME_SECONDS in data:
-            rain_delay_expiry._next_time = dt.as_local(dt.utc_from_timestamp(data[const.ATTR_RAIN_DELAY_END_TIME_SECONDS]))
+        run_button_entity = ZoneStartRunButton(zone_id, zone_name, device_info, run_time_entity, zone_status_entity,zone_valves)
         zone_next_schedule_entity = ZoneNextScheduleSensor(zone_id, zone_name, device_info)
 
-        data[const.ATTR_RAIN_DELAY_CURRENT_SETTING] = rain_delay_time_entity.native_value
-        data[const.ATTR_RAIN_DELAY_END_TIME_SECONDS] = int(rain_delay_expiry.native_value.timestamp())
         self.store.create_zone(data)
 
         async_add_buttons = self.hass.data[DOMAIN]["add_button_entity"]
@@ -142,8 +154,8 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         async_add_numbers = self.hass.data[DOMAIN]["add_number_entity"]
 
         async_add_buttons([run_button_entity])
-        async_add_sensors([zone_status_entity, zone_next_schedule_entity, rain_delay_expiry])
-        async_add_numbers([run_time_entity, rain_delay_time_entity])
+        async_add_sensors([zone_status_entity, zone_next_schedule_entity])
+        async_add_numbers([run_time_entity])
 
         #store them in hass.data for later reference.
 
@@ -151,8 +163,6 @@ class SprinkleCoordinator(DataUpdateCoordinator):
             "status": zone_status_entity,
             "run_trigger": run_button_entity,
             "run_timer": run_time_entity,
-            "rain_delay": rain_delay_time_entity,
-            "rain_delay_expire": rain_delay_expiry,
             "next_schedule": zone_next_schedule_entity
         }
         self.hass.data[DOMAIN]["zones"][zone_id] = zone_structure
@@ -166,19 +176,6 @@ class SprinkleCoordinator(DataUpdateCoordinator):
             #remove from store.
             self.store.remove_zone(zone_id)
 
-    def async_save_zone_changes(self, zone_id: str):
-        #We will save all entity data into hass.data[DOMAIN][zones]["entity_key"] for memory,
-        # and we will only call a save request when needed, the storage will parse itself.
-        zone_set = self.hass.data[DOMAIN]["zones"]
-        if zone_id not in zone_set:
-            return
-        #Now we get a fresh data, parse it into the serializable object, and call save.
-        if zone_id not in self.store.zones:
-            return
-        zone_serializable: SprinkleZone = self.store.zones[zone_id]
-        zone_serializable.rain_delay_set_value = zone_set[zone_id]["rain_delay"].native_value
-        zone_serializable.rain_delay_end_time_seconds = int(zone_set[zone_id]["rain_delay_expire"].native_value.timestamp())
-        self.store.async_queue_save()
 
     async def async_create_cycle(self, cycle_id: str, data: dict):
 
@@ -227,4 +224,10 @@ class SprinkleCoordinator(DataUpdateCoordinator):
     async def async_delete_config(self):
         """Wipe storage and config"""
         await self.store.async_delete()
+
+    async def async_update_rain_delay_expiry(self, rain_delay_expiry_timestamp):
+
+        self.store.config.rain_delay_end_time_seconds = int(rain_delay_expiry_timestamp.timestamp())
+        self.store.async_queue_save()
+
 

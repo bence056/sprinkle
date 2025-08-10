@@ -60,16 +60,13 @@ class ZoneNextScheduleSensor(SensorEntity):
         return self._next_time
 
 
-class ZoneRainDelayExpiry(SensorEntity):
-    def __init__(self, zone_id, name, device_info, rain_delay_input: RainDelayDurationNumber):
-        self._attr_unique_id = f"{DOMAIN}_{zone_id}_expiry"
-        self._zone_id = zone_id
-        self._attr_name = f"{name} Expiry"
+class RainDelayExpiry(SensorEntity):
+    def __init__(self, device_info, expire_seconds):
+        self._attr_unique_id = f"{DOMAIN}_rain_delay_expiry"
+        self._attr_name = f"Rain Delay Expiry"
         self._attr_device_info = device_info
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
-        self._next_time = dt.now() + timedelta(hours=rain_delay_input.native_value)
-        self._rain_delay_input_entity: RainDelayDurationNumber = rain_delay_input
-        rain_delay_input._assigned_expiry_entity = self
+        self._next_time = dt.now() + timedelta(hours=1)
 
     @property
     def device_info(self):
@@ -79,19 +76,9 @@ class ZoneRainDelayExpiry(SensorEntity):
     def native_value(self):
         return self._next_time
 
-    def recalculate_next_time(self):
-        self._next_time = dt.now() + timedelta(hours=self._rain_delay_input_entity.native_value)
+    def recalculate_next_time(self, set_hours):
+        self._next_time = dt.now() + timedelta(hours=set_hours)
         self.async_write_ha_state()
-        coordinator = self.hass.data[DOMAIN]["coordinator"]
-        coordinator.async_save_zone_changes(self.zone_id)
-
-    @property
-    def zone_id(self):
-        return self._zone_id
-
-    @property
-    def rain_delay_input_entity(self):
-        return self._rain_delay_input_entity
 
 
 
