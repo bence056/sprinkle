@@ -16,7 +16,7 @@ from homeassistant.util import dt
 @attr.s(slots=True, frozen=False)
 class SprinkleConfig:
 
-    rain_delay_end_time_seconds = attr.field(type=int, default=0)
+    rain_delay_end_time_seconds = attr.field(type=int, default=int((dt.now() - timedelta(minutes=5)).timestamp()))
 
 @attr.s(slots=True, frozen=False)
 class SprinkleZone:
@@ -65,7 +65,7 @@ class SprinkleStorage:
                 save_key = data["save_key"]
 
             if "config" in data:
-                config = data["config"]
+                config = SprinkleConfig(**data["config"])
 
             if "zones" in data:
                 for zone in data["zones"]:
@@ -91,13 +91,12 @@ class SprinkleStorage:
             self.save_key = save_key
             self.config = config
 
-            if save_key == -1:
-                await self.async_factory_default()
+        else:
+            await self.async_factory_default()
 
     async def async_factory_default(self):
         self.save_key = 1
         self.config = SprinkleConfig()
-        self.config.rain_delay_end_time_seconds = dt.now() - timedelta(minutes=5)
 
     async def async_save(self):
         await self._store.async_save(self.parse_save_data())
@@ -110,7 +109,7 @@ class SprinkleStorage:
     def parse_save_data(self) -> dict:
         self.save_key += 1
         store_data = {"save_key": self.save_key,
-                      "config": self.config,
+                      "config": attr.asdict(self.config),
                       "zones": [
             attr.asdict(zoneRaw) for zoneRaw in self.zones.values()
         ],

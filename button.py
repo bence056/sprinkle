@@ -4,7 +4,6 @@ from homeassistant.components.button import ButtonEntity
 from homeassistant.helpers.entity import Entity, DeviceInfo
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from . import SprinkleCoordinator
 from .const import DOMAIN
 import asyncio
 
@@ -72,7 +71,7 @@ class RainDelaySetterButton(ButtonEntity):
     async def async_press(self):
         hours = self._rain_delay_value.native_value
         self._rain_delay_expiry.recalculate_next_time(hours)
-        coordinator: SprinkleCoordinator = self.hass.data[DOMAIN]["coordinator"]
+        coordinator = self.hass.data[DOMAIN]["coordinator"]
         await coordinator.async_update_rain_delay_expiry(self._rain_delay_expiry.native_value)
 
 
