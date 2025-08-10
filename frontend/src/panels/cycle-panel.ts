@@ -79,7 +79,7 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
                             </div>
                         </ha-card>
                     `)}
-                    <ha-button @click=${() => this.openCycleDialog(null)}>Add Cycle</ha-button>
+                    <ha-button .disabled=${this.availableZones.length == 0} @click=${() => this.openCycleDialog(null)}>Add Cycle</ha-button>
                 </ha-card>
             </div>
 
@@ -109,6 +109,12 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
         if (this.availableZones.length === 0) return;
         const firstZoneId = this.availableZones[0].id;
         this.currentSteps.push({ zone_id: firstZoneId, zone_minutes: 5 });
+        this.requestUpdate();
+    }
+
+    private removeStep(index: number) {
+        if (this.availableZones.length <=1) return;
+        this.currentSteps.splice(index, 1);
         this.requestUpdate();
     }
 
@@ -172,6 +178,11 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
                     <div class="draggable-list">
                         ${this.currentSteps.map((step, index) => html`
                             <div class="step-row">
+                                <ha-icon-button
+                                        title="Remove Step"
+                                        @click=${() => this.removeStep(index)}
+                                        .disabled=${this.currentSteps.length<=1}
+                                ><ha-icon icon="mdi:close"></ha-icon></ha-icon-button>
                                 <ha-select
                                     .value=${step.zone_id}
                                     @selected=${(e: Event) => 
@@ -190,10 +201,12 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
                                 ></ha-textfield>
                                 <div class="move-buttons">
                                     <ha-icon-button
+                                        title="Move Up"    
                                         @click=${() => this.moveStep(index, -1)}
                                         .disabled=${index === 0}
                                     ><ha-icon icon="mdi:arrow-up"></ha-icon></ha-icon-button>
                                     <ha-icon-button
+                                        title="Move Down"    
                                         @click=${() => this.moveStep(index, 1)}
                                         .disabled=${index === this.currentSteps.length - 1}
                                     ><ha-icon icon="mdi:arrow-down"></ha-icon></ha-icon-button>
