@@ -1,9 +1,7 @@
-from homeassistant.components.frontend import async_remove_panel
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 import logging
 
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .websocket import register_websockets
 from .store import async_get_registry
 from .coordinator import SprinkleCoordinator

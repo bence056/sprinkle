@@ -17,9 +17,9 @@ class ZoneRunDurationNumber(NumberEntity):
         self._attr_unique_id = f"{DOMAIN}_{zone_id}_run_duration"
         self._attr_name = f"{name} Run Duration"
         self._attr_device_info = device_info
-        self._attr_min_value = 1
-        self._attr_max_value = 60
-        self._attr_step = 1
+        self._attr_native_min_value = 1
+        self._attr_native_max_value = 20
+        self._attr_native_step = 1
         self._attr_native_unit_of_measurement = UnitOfTime.MINUTES
         self._attr_value = 5
 
