@@ -4,7 +4,7 @@ from homeassistant.components.button import ButtonEntity
 from homeassistant.helpers.entity import Entity, DeviceInfo
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from .const import DOMAIN
+from .const import DOMAIN, ZONE_IDLE, ZONE_RUNNING
 import asyncio
 
 import logging
@@ -24,12 +24,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
 
 class ZoneStartRunButton(ButtonEntity):
-    def __init__(self, zone_id, name, device_info, duration_entity, status_entity, zone_valves: list[str]):
-        self._attr_unique_id = f"{DOMAIN}_{zone_id}_start_run"
+    def __init__(self, zone_id, name, device_info, zone_coordinator, zone_valves: list[str]):
+        self._attr_unique_id = f"{DOMAIN}_{zone_id}_manual_run"
         self._attr_name = f"{name} Start/Stop Run"
         self._attr_device_info = device_info
-        self._duration_entity = duration_entity
-        self._status_entity = status_entity
+        self._zone_coordinator = zone_coordinator
         self._zone_valves = zone_valves
 
     @property
@@ -37,8 +36,7 @@ class ZoneStartRunButton(ButtonEntity):
         return self._attr_device_info
 
     async def async_press(self):
-        minutes = self._duration_entity.native_value
-        self._status_entity.handle_zone_run_pressed(minutes)
+        await self._zone_coordinator.async_manual_run_button_pressed()
 
     @property
     def extra_state_attributes(self) -> Mapping[str, Any] | None:

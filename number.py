@@ -13,9 +13,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
 
 class ZoneRunDurationNumber(NumberEntity):
-    def __init__(self, zone_id, name, device_info):
+    def __init__(self, zone_id, name, device_info, zone_coordinator):
         self._attr_unique_id = f"{DOMAIN}_{zone_id}_run_duration"
         self._attr_name = f"{name} Run Duration"
+        self._zone_coordinator = zone_coordinator
         self._attr_device_info = device_info
         self._attr_native_min_value = 1
         self._attr_native_max_value = 20

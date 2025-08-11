@@ -22,9 +22,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
 
 class ZoneStatusSensor(SensorEntity):
-    def __init__(self, zone_id, name, device_info):
+    def __init__(self, zone_id, name, device_info, zone_coordinator):
         self._attr_unique_id = f"{DOMAIN}_{zone_id}_status"
         self._attr_name = f"{name} Status"
+        self._zone_coordinator = zone_coordinator
         self._attr_icon = "mdi:valve"
         self._attr_device_info = device_info
         self._status = ZONE_IDLE
@@ -42,36 +43,19 @@ class ZoneStatusSensor(SensorEntity):
         self.async_write_ha_state()
 
 
-    def handle_zone_run_pressed(self, run_minutes = 1):
-        if self._status == ZONE_RUNNING:
-            #pause manual run
-            self.set_status(ZONE_IDLE)
-        if self._status == ZONE_IDLE:
-            #Start manual run.
-            self.set_status(ZONE_RUNNING)
-            async_track_point_in_utc_time(self.hass, self.zone_run_expiry_callback, dt.utcnow() + timedelta(seconds=run_minutes))
-
-
-    async def zone_run_expiry_callback(self, now: datetime):
-
-        self._status = ZONE_IDLE
-        # self.schedule_update_ha_state()
-        self.async_write_ha_state()
 
 
 
 
 
-
-
-
-class ZoneNextScheduleSensor(SensorEntity):
-    def __init__(self, zone_id, name, device_info):
-        self._attr_unique_id = f"{DOMAIN}_{zone_id}_next_schedule"
-        self._attr_name = f"{name} Next Schedule"
+class ZoneIrrigationFinishTime(SensorEntity):
+    def __init__(self, zone_id, name, device_info, zone_coordinator):
+        self._attr_unique_id = f"{DOMAIN}_{zone_id}_finish_timestamp"
+        self._attr_name = f"{name} Time Remaining"
+        self._zone_coordinator = zone_coordinator
         self._attr_device_info = device_info
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
-        self._next_time = dt.now() + timedelta(hours=6)
+        self._finish_time = None
 
     @property
     def device_info(self):
@@ -79,7 +63,11 @@ class ZoneNextScheduleSensor(SensorEntity):
 
     @property
     def native_value(self):
-        return self._next_time
+        return self._finish_time
+
+    def set_finish_timestamp(self, timestamp):
+        self._finish_time = timestamp
+        self.async_write_ha_state()
 
 
 class RainDelayExpiry(SensorEntity):

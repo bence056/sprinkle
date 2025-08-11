@@ -1,3 +1,5 @@
+from datetime import timedelta, datetime
+
 import attr
 
 import homeassistant.helpers.dispatcher
@@ -5,6 +7,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
+from homeassistant.helpers.event import async_track_point_in_time
 from .button import ZoneStartRunButton, CycleStartRunButton, RainDelaySetterButton
 from .const import DOMAIN, VERSION
 from homeassistant.util import dt
@@ -12,10 +15,82 @@ from . import const
 import logging
 
 from .number import ZoneRunDurationNumber, RainDelayDurationNumber
-from .sensor import ZoneStatusSensor, ZoneNextScheduleSensor, RainDelayExpiry, CycleRemainingMinutes
+from .sensor import ZoneStatusSensor, ZoneIrrigationFinishTime, RainDelayExpiry, CycleRemainingMinutes
 from .store import SprinkleStorage, SprinkleZone, SprinkleCycleStep, SprinkleCycle
 
 _LOGGER = logging.getLogger(__name__)
+
+class SprinkleZoneCoordinator:
+    def __init__(self, hass, zone_id, zone_name, zone_valves):
+
+        self.hass = hass
+        self.zone_id = zone_id
+        self.zone_name = zone_name
+        self.zone_valves = zone_valves
+
+        async_add_buttons = self.hass.data[DOMAIN]["add_button_entity"]
+        async_add_sensors = self.hass.data[DOMAIN]["add_sensor_entity"]
+        async_add_numbers = self.hass.data[DOMAIN]["add_number_entity"]
+
+        device_info = self.build_zone_device_info(zone_id, zone_name)
+
+        self.zone_status_entity = ZoneStatusSensor(zone_id, zone_name, device_info, self)
+        self.zone_run_trigger_entity = ZoneStartRunButton(zone_id, zone_name, device_info, self, zone_valves)
+        self.zone_run_timer_entity = ZoneRunDurationNumber(zone_id, zone_name, device_info, self)
+        self.zone_finish_time_entity = ZoneIrrigationFinishTime(zone_id, zone_name, device_info, self)
+
+        self.zone_manual_expiry_timestamp: datetime = dt.now()
+        self.timer_callback_obj = None
+
+        async_add_buttons([self.zone_run_trigger_entity])
+        async_add_sensors([self.zone_status_entity, self.zone_finish_time_entity])
+        async_add_numbers([self.zone_run_timer_entity])
+
+
+    async def async_manual_run_button_pressed(self):
+        if self.zone_status_entity.native_value == const.ZONE_IDLE:
+            await self.async_start_manual_run()
+        elif self.zone_status_entity.native_value == const.ZONE_RUNNING:
+            await self.async_stop_run()
+
+
+    async def async_start_manual_run(self):
+        if self.zone_status_entity.native_value == const.ZONE_IDLE:
+            #Start a manual run cycle.
+            self.zone_status_entity.set_status(const.ZONE_RUNNING)
+            run_time = self.zone_run_timer_entity.native_value
+            await self.async_start_run(run_time)
+
+    async def async_start_run(self, minutes):
+        if self.zone_status_entity.native_value == const.ZONE_IDLE:
+            return
+
+        end_time = dt.now() + timedelta(seconds=minutes)
+        if self.timer_callback_obj:
+            self.timer_callback_obj()
+        self.zone_manual_expiry_timestamp = end_time
+        self.zone_finish_time_entity.set_finish_timestamp(self.zone_manual_expiry_timestamp)
+        self.timer_callback_obj = async_track_point_in_time(self.hass, self.async_zone_timer_end_callback, end_time)
+
+
+    async def async_stop_run(self):
+        if self.timer_callback_obj:
+            self.timer_callback_obj()
+        self.zone_status_entity.set_status(const.ZONE_IDLE)
+        self.zone_finish_time_entity.set_finish_timestamp(None)
+
+    async def async_zone_timer_end_callback(self, now: datetime):
+        await self.async_stop_run()
+
+    def build_zone_device_info(self, zone_id: str, zone_name: str):
+        return {
+            "identifiers": {(DOMAIN, zone_id)},
+            "name": zone_name,
+            "manufacturer": "bence056",
+            "model": "Sprinkle Zone",
+            "sw_version": VERSION
+        }
+
 
 class SprinkleCoordinator(DataUpdateCoordinator):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry, store):
@@ -23,6 +98,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         self.store: SprinkleStorage = store
         self.id = entry.entry_id
         self.entry = entry
+        self.zones: dict[str, SprinkleZoneCoordinator] = {}
         super().__init__(hass, _LOGGER, name=DOMAIN)
 
 
@@ -65,15 +141,6 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         async_add_numbers([rain_delay_number_entity])
         async_add_buttons([rain_delay_setter_entity])
 
-
-    def build_zone_device_info(self, zone_id: str, zone_name: str):
-        return {
-            "identifiers": {(DOMAIN, zone_id)},
-            "name": zone_name,
-            "manufacturer": "bence056",
-            "model": "Sprinkle Zone",
-            "sw_version": VERSION
-        }
 
 
     def build_cycle_device_info(self, cycle_id: str, cycle_name: str):
@@ -135,11 +202,12 @@ class SprinkleCoordinator(DataUpdateCoordinator):
     async def async_modify_zone(self, zone_id: str, data: dict):
         if const.ATTR_ZONE_VALVES not in data:
             return
-        zone_set = self.hass.data[DOMAIN]["zones"]
-        if zone_id not in zone_set:
+        if zone_id not in self.zones.keys():
             return
+        #stop running the zone to prevent softlocks
+        await self.zones[zone_id].async_stop_run()
         #edit the data on the toggle entity to represent new valves.
-        zone_toggle: ZoneStartRunButton = zone_set[zone_id]["run_trigger"]
+        zone_toggle: ZoneStartRunButton = self.zones[zone_id].zone_run_timer_entity
         zone_toggle.zone_valves = data[const.ATTR_ZONE_VALVES]
         #Edit it in the serializable data as well.
         zone_serializable: SprinkleZone = self.store.zones[zone_id]
@@ -151,34 +219,22 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         zone_name = data[const.ATTR_ZONE_NAME]
         zone_valves = data[const.ATTR_ZONE_VALVES]
 
-        device_info = self.build_zone_device_info(zone_id, zone_name)
+        # create zone coordinator. It will create the entities as well.
+        self.zones[zone_id] = SprinkleZoneCoordinator(self.hass, zone_id, zone_name, zone_valves)
 
-        zone_status_entity = ZoneStatusSensor(zone_id, zone_name, device_info)
-        run_time_entity = ZoneRunDurationNumber(zone_id, zone_name, device_info)
-        run_button_entity = ZoneStartRunButton(zone_id, zone_name, device_info, run_time_entity, zone_status_entity,zone_valves)
-        zone_next_schedule_entity = ZoneNextScheduleSensor(zone_id, zone_name, device_info)
+
 
         self.store.create_zone(data)
 
-        async_add_buttons = self.hass.data[DOMAIN]["add_button_entity"]
-        async_add_sensors = self.hass.data[DOMAIN]["add_sensor_entity"]
-        async_add_numbers = self.hass.data[DOMAIN]["add_number_entity"]
 
-        async_add_buttons([run_button_entity])
-        async_add_sensors([zone_status_entity, zone_next_schedule_entity])
-        async_add_numbers([run_time_entity])
-
-        #store them in hass.data for later reference.
-
-        zone_structure = {
-            "status": zone_status_entity,
-            "run_trigger": run_button_entity,
-            "run_timer": run_time_entity,
-            "next_schedule": zone_next_schedule_entity
-        }
-        self.hass.data[DOMAIN]["zones"][zone_id] = zone_structure
 
     async def async_delete_zone(self, zone_id: str):
+
+        # stop zone and remove coordinator.
+        if zone_id in self.zones.keys():
+            await self.zones[zone_id].async_stop_run()
+            del self.zones[zone_id]
+
         device_registry = async_get_device_registry(self.hass)
         device_id = await self.async_get_device_id_from_zone(zone_id)
         _LOGGER.info(device_id)
