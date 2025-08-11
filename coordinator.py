@@ -65,12 +65,18 @@ class SprinkleZoneCoordinator:
         if self.zone_status_entity.native_value == const.ZONE_IDLE:
             return
 
-        end_time = dt.now() + timedelta(seconds=minutes)
+        end_time = dt.now() + timedelta(minutes=minutes)
         if self.timer_callback_obj:
             self.timer_callback_obj()
         self.zone_manual_expiry_timestamp = end_time
         self.zone_finish_time_entity.set_finish_timestamp(self.zone_manual_expiry_timestamp)
         self.timer_callback_obj = async_track_point_in_time(self.hass, self.async_zone_timer_end_callback, end_time)
+        await self.hass.services.async_call(
+            "valve",  # domain
+            "open_valve",  # service
+            {"entity_id": self.zone_valves},  # service data
+            blocking=True
+        )
 
 
     async def async_stop_run(self):
@@ -78,6 +84,12 @@ class SprinkleZoneCoordinator:
             self.timer_callback_obj()
         self.zone_status_entity.set_status(const.ZONE_IDLE)
         self.zone_finish_time_entity.set_finish_timestamp(None)
+        await self.hass.services.async_call(
+            "valve",  # domain
+            "close_valve",  # service
+            {"entity_id": self.zone_valves},  # service data
+            blocking=True
+        )
 
     async def async_zone_timer_end_callback(self, now: datetime):
         await self.async_stop_run()

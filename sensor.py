@@ -51,7 +51,7 @@ class ZoneStatusSensor(SensorEntity):
 class ZoneIrrigationFinishTime(SensorEntity):
     def __init__(self, zone_id, name, device_info, zone_coordinator):
         self._attr_unique_id = f"{DOMAIN}_{zone_id}_finish_timestamp"
-        self._attr_name = f"{name} Time Remaining"
+        self._attr_name = f"{name} Watering End Time"
         self._zone_coordinator = zone_coordinator
         self._attr_device_info = device_info
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
