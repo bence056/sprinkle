@@ -24,9 +24,12 @@ class SprinkleZoneCoordinator:
     def __init__(self, hass, zone_id, zone_name, zone_valves):
 
         self.hass = hass
+        self.coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
         self.zone_id = zone_id
         self.zone_name = zone_name
         self.zone_valves = zone_valves
+        self.controlling_cycle = None
+        self.zone_running = False
 
         async_add_buttons = self.hass.data[DOMAIN]["add_button_entity"]
         async_add_sensors = self.hass.data[DOMAIN]["add_sensor_entity"]
@@ -47,45 +50,55 @@ class SprinkleZoneCoordinator:
         async_add_numbers([self.zone_run_timer_entity])
 
     @property
+    def is_manually_running(self):
+        return self.zone_running and self.controlling_cycle is None
+
+    @property
+    def is_running_from_cycle(self):
+        return self.zone_running and self.controlling_cycle is not None
+
+    @property
     def is_running(self):
-        return self.zone_status_entity.native_value in [const.ZONE_RUNNING, const.ZONE_AUTO_RUN]
+        return self.zone_running
 
 
     async def async_manual_run_button_pressed(self):
-        if self.zone_status_entity.native_value == const.ZONE_IDLE:
+
+        if not self.is_running:
+            #zone is not running in any state, we want to start it manually now.
             await self.async_start_manual_run()
-        elif self.zone_status_entity.native_value == const.ZONE_RUNNING:
-            await self.async_stop_run()
+        else:
+            if self.is_manually_running:
+                # We need to stop this zone only, because this is the only running zone.
+                await self.async_stop_run()
+            else:
+                # The zone is running, and it is controlled by a cycle, we need to cancel the active cycle, and start this zone manually.
+                await self.coordinator.async_stop_active_cycle()
+                await self.async_start_manual_run()
 
 
     async def async_start_manual_run(self):
         if self.zone_status_entity.native_value == const.ZONE_IDLE:
-            #we first stop all cycles, that could interfere with this run.
-            main_coordinator: SprinkleCoordinator = self.hass.data[DOMAIN]["coordinator"]
-            if not main_coordinator:
-                return
-            await main_coordinator.async_stop_all_cycles()
+
             #Start a manual run cycle.
-            self.zone_status_entity.set_status(const.ZONE_RUNNING)
+            self.zone_status_entity.set_status(const.ZONE_RUNNING_MANUAL)
+            self.zone_running = True
             run_time = self.zone_run_timer_entity.native_value
             await self.async_start_run(run_time)
 
-    async def async_start_run_from_cycle(self, cycle_coordinator):
-        pass
+    async def async_start_run_from_cycle(self, cycle_coordinator, minutes):
+        self.controlling_cycle = cycle_coordinator
+        await self.async_start_run(minutes)
 
     async def async_start_run(self, minutes):
         if self.zone_status_entity.native_value == const.ZONE_IDLE:
             return
-        main_coordinator: SprinkleCoordinator = self.hass.data[DOMAIN]["coordinator"]
-        if not main_coordinator:
-            return
-        #stop all zones before running this zone. We only stop zones here, upon manual start, we stop all cycles as well.
-        await main_coordinator.async_stop_all_zones()
-        end_time = dt.now() + timedelta(minutes=minutes)
+        end_time = dt.now() + timedelta(seconds=minutes)
         if self.timer_callback_obj:
             self.timer_callback_obj()
         self.zone_manual_expiry_timestamp = end_time
         self.zone_finish_time_entity.set_finish_timestamp(self.zone_manual_expiry_timestamp)
+        self.coordinator.active_zone = self
         self.timer_callback_obj = async_track_point_in_time(self.hass, self.async_zone_timer_end_callback, end_time)
         await self.hass.services.async_call(
             "valve",  # domain
@@ -106,6 +119,12 @@ class SprinkleZoneCoordinator:
             {"entity_id": self.zone_valves},  # service data
             blocking=True
         )
+        self.zone_running = False
+        if self.controlling_cycle is not None:
+            #notify the cycle that the zone finished its run.
+            self.controlling_cycle.async_advance_cycle_zone()
+            self.controlling_cycle = None
+        self.coordinator.active_zone = None
 
     async def async_zone_timer_end_callback(self, now: datetime):
         await self.async_stop_run()
@@ -122,6 +141,7 @@ class SprinkleZoneCoordinator:
 class SprinkleCycleCoordinator:
     def __init__(self, hass, cycle_id, cycle_name, cycle_steps: list[SprinkleCycleStep]):
         self.hass = hass
+        self.coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
         self.cycle_id = cycle_id
         self.cycle_name = cycle_name
         self.cycle_steps = cycle_steps
@@ -151,30 +171,43 @@ class SprinkleCycleCoordinator:
     def is_running(self):
         return self.current_step_index >= 0
 
+    async def async_start_cycle_button_pressed(self):
+        if self.is_running:
+            await self.async_stop_cycle()
+        else:
+            #We need to stop the active cycle and zone before starting this.
+            await self.coordinator.async_stop_active_cycle()
+            await self.coordinator.async_stop_active_zone()
+            await self.async_start_cycle()
+
     async def async_start_cycle(self):
 
         if self.current_step_index == -1 and len(self.assigned_zones) > 0:
-            #stop all zones and cycles that are currently running.
-            main_coordinator: SprinkleCoordinator = self.hass.data[DOMAIN]["coordinator"]
-            if not main_coordinator:
-                return
-            await main_coordinator.async_stop_all_cycles()
-            await main_coordinator.async_stop_all_zones()
-
             #start a cycle.
+            self.coordinator.active_cycle = self
             await self.async_advance_cycle_zone()
 
 
     async def async_advance_cycle_zone(self):
 
-        if self.current_step_index >= 0:
-            #start a new zone, it will auto stop everything else before running.
-            pass
+        self.current_step_index+=1
+        if self.current_step_index < len(self.assigned_zones):
+            #start new zone run.
+            await (self.assigned_zones[self.current_step_index]
+                   .async_start_run_from_cycle(self, self.cycle_steps[self.current_step_index].zone_minutes))
+        else:
+            #No more zones to run, stop the cycle.
+            await self.async_stop_cycle()
+
 
 
 
     async def async_stop_cycle(self):
-        pass
+        #try turning off the current zone if its active.
+        if self.assigned_zones[self.current_step_index].is_running:
+            await self.assigned_zones[self.current_step_index].async_stop_run()
+        self.current_step_index = -1
+        self.coordinator.active_cycle = None
 
 
     def build_cycle_device_info(self):
@@ -195,6 +228,8 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         self.entry = entry
         self.zones: dict[str, SprinkleZoneCoordinator] = {}
         self.cycles: dict[str, SprinkleCycleCoordinator] = {}
+        self.active_zone = None
+        self.active_cycle = None
         super().__init__(hass, _LOGGER, name=DOMAIN)
 
 
@@ -293,7 +328,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         #stop running the zone to prevent softlocks
         await self.zones[zone_id].async_stop_run()
         #edit the data on the toggle entity to represent new valves.
-        zone_toggle: ZoneStartRunButton = self.zones[zone_id].zone_run_timer_entity
+        zone_toggle: ZoneStartRunButton = self.zones[zone_id].zone_run_trigger_entity
         zone_toggle.zone_valves = data[const.ATTR_ZONE_VALVES]
         #Edit it in the serializable data as well.
         zone_serializable: SprinkleZone = self.store.zones[zone_id]
@@ -401,15 +436,22 @@ class SprinkleCoordinator(DataUpdateCoordinator):
             self.store.config.rain_delay_end_time_seconds = new_time
             self.store.async_queue_save()
 
-    async def async_stop_all_zones(self):
-        for zone in self.zones.values():
-            if zone.is_running:
-                await zone.async_stop_run()
-
-
-    async def async_stop_all_cycles(self):
+    async def async_stop_all_cycles_and_zones(self):
         for cycle in self.cycles.values():
             if cycle.is_running:
                 await cycle.async_stop_cycle()
+        for zone in self.zones.values():
+            if zone.is_manually_running:
+                await zone.async_stop_run()
 
+    async def async_stop_active_cycle(self):
+        if self.active_cycle is not None:
+            self.active_cycle.async_stop_cycle()
+
+    async def async_stop_active_zone(self):
+        if self.active_zone is not None:
+            self.active_zone.async_stop_run()
+
+def try_get_coordinator(hass: HomeAssistant) -> SprinkleCoordinator:
+    return hass.data[const.DOMAIN]["coordinator"]
 

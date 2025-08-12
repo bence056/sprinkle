@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import dt
 from homeassistant.helpers.event import async_track_point_in_utc_time
 from tests.components.cover.test_init import set_state
-from .const import DOMAIN, ZONE_AUTO_RUN, ZONE_IDLE, ZONE_RAIN_DELAY, ZONE_RUNNING
+from .const import DOMAIN, ZONE_RUNNING_CYCLE, ZONE_IDLE, ZONE_RAIN_DELAY, ZONE_RUNNING_MANUAL
 import asyncio
 
 from .number import RainDelayDurationNumber
@@ -99,7 +99,7 @@ class CycleRemainingMinutes(SensorEntity):
         self._coordinator = coordinator
         self._attr_name = f"{name} Remaining Minutes"
         self._attr_device_info = device_info
-        self._remaining_minutes = 3
+        self._remaining_minutes = None
 
     @property
     def device_info(self):

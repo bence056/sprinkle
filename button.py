@@ -4,7 +4,7 @@ from homeassistant.components.button import ButtonEntity
 from homeassistant.helpers.entity import Entity, DeviceInfo
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from .const import DOMAIN, ZONE_IDLE, ZONE_RUNNING
+from .const import DOMAIN, ZONE_IDLE, ZONE_RUNNING_MANUAL
 import asyncio
 
 import logging
@@ -84,4 +84,4 @@ class CycleStartRunButton(ButtonEntity):
         return self._attr_device_info
 
     async def async_press(self):
-        pass
+        await self.coordinator.async_start_cycle_button_pressed()
