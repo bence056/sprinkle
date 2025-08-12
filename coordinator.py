@@ -88,6 +88,8 @@ class SprinkleZoneCoordinator:
 
     async def async_start_run_from_cycle(self, cycle_coordinator, minutes):
         self.controlling_cycle = cycle_coordinator
+        self.zone_running = True
+        self.zone_status_entity.set_status(const.ZONE_RUNNING_CYCLE)
         await self.async_start_run(minutes)
 
     async def async_start_run(self, minutes):
@@ -122,7 +124,7 @@ class SprinkleZoneCoordinator:
         self.zone_running = False
         if self.controlling_cycle is not None:
             #notify the cycle that the zone finished its run.
-            self.controlling_cycle.async_advance_cycle_zone()
+            await self.controlling_cycle.async_advance_cycle_zone()
             self.controlling_cycle = None
         self.coordinator.active_zone = None
 
@@ -144,7 +146,7 @@ class SprinkleCycleCoordinator:
         self.coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
         self.cycle_id = cycle_id
         self.cycle_name = cycle_name
-        self.cycle_steps = cycle_steps
+        self.cycle_steps = []
         self.current_step_index = -1
 
         device_info = self.build_cycle_device_info()
@@ -159,13 +161,8 @@ class SprinkleCycleCoordinator:
 
         self.assigned_zones: list[SprinkleZoneCoordinator] = []
         #load the zone coordinator references into an array.
-        main_coordinator: SprinkleCoordinator = self.hass.data[DOMAIN]["coordinator"]
-        if not main_coordinator:
-            return
-        for cycle_step in self.cycle_steps:
-            zone_coordinator = main_coordinator.zones[cycle_step.zone_id]
-            if cycle_step is not None:
-                self.assigned_zones.append(zone_coordinator)
+        self.update_cycle_steps(cycle_steps)
+
 
     @property
     def is_running(self):
@@ -203,11 +200,24 @@ class SprinkleCycleCoordinator:
 
 
     async def async_stop_cycle(self):
-        #try turning off the current zone if its active.
-        if self.assigned_zones[self.current_step_index].is_running:
-            await self.assigned_zones[self.current_step_index].async_stop_run()
+        #first check if the index of the cycle step is still within bounds.
+        # if it is, it means that the cycle was interrupted, so we need to manually stop the currently active zone.
+        # if it isn't, it means that the last zone has ended its cycle, no need to manually stop it.
+        if self.current_step_index < len(self.assigned_zones):
+            if self.assigned_zones[self.current_step_index].is_running:
+                #forcefully set the cycle to none, so the zone won't call back to go to the next step.
+                self.assigned_zones[self.current_step_index].controlling_cycle = None
+                await self.assigned_zones[self.current_step_index].async_stop_run()
         self.current_step_index = -1
         self.coordinator.active_cycle = None
+
+    def update_cycle_steps(self, cycle_steps: list[SprinkleCycleStep]):
+        self.cycle_steps = cycle_steps
+        self.assigned_zones.clear()
+        for cycle_step in self.cycle_steps:
+            zone_coordinator = self.coordinator.zones[cycle_step.zone_id]
+            if cycle_step is not None:
+                self.assigned_zones.append(zone_coordinator)
 
 
     def build_cycle_device_info(self):
@@ -292,6 +302,9 @@ class SprinkleCoordinator(DataUpdateCoordinator):
 
     async def async_update_zone_config(self, zone_id: str, data: dict):
 
+        #stop any cycle and zone to be able to safely modify data.
+        await self.async_stop_all_cycles_and_zones()
+
         if const.ATTR_ZONE_DELETE in data:
             #Delete zone requested
             await self.async_delete_zone(zone_id)
@@ -306,6 +319,9 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         homeassistant.helpers.dispatcher.async_dispatcher_send(self.hass, "sprinkle_update_dispatch")
 
     async def async_update_cycle_config(self, cycle_id: str, data: dict):
+
+        # stop any cycle and zone to be able to safely modify data.
+        await self.async_stop_all_cycles_and_zones()
 
         if const.ATTR_CYCLE_DELETE in data:
             # Delete cycle requested
@@ -362,7 +378,6 @@ class SprinkleCoordinator(DataUpdateCoordinator):
             self.store.remove_zone(zone_id)
 
             #check if there are cycles that contain this zone.
-            cycle_set = self.hass.data[DOMAIN]["cycles"]
             cycles_to_delete: list[str] = []
             store_modified = False
             for key,value in self.store.cycles.items():
@@ -382,8 +397,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
 
                 #check if we actually removed some zones from the list, if we did, we can follow up with the next modification.
                 if len(to_remove) > 0:
-                    cycle_run_entity: CycleStartRunButton = cycle_set[value.cycle_id]["run_trigger"]
-                    cycle_run_entity._cycle_steps = value.cycle_steps
+                    self.cycles[value.cycle_id].update_cycle_steps(value.cycle_steps)
 
             if store_modified:
                 self.store.async_queue_save()
@@ -406,9 +420,8 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         if cycle_id not in self.cycles.keys():
             return
         edited_cycle = self.store.create_or_modify_cycle(data)
-        #update entity data as well.
-        cycle_run_entity: CycleStartRunButton = self.cycles[cycle_id].cycle_run_entity
-        cycle_run_entity._cycle_steps = edited_cycle.cycle_steps
+        #update coordinator data as well.
+        self.cycles[cycle_id].update_cycle_steps(edited_cycle.cycle_steps)
 
     async def async_delete_cycle(self, cycle_id: str):
         device_registry = async_get_device_registry(self.hass)
@@ -441,7 +454,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
             if cycle.is_running:
                 await cycle.async_stop_cycle()
         for zone in self.zones.values():
-            if zone.is_manually_running:
+            if zone.is_running:
                 await zone.async_stop_run()
 
     async def async_stop_active_cycle(self):
