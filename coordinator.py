@@ -32,7 +32,7 @@ class SprinkleZoneCoordinator:
         async_add_sensors = self.hass.data[DOMAIN]["add_sensor_entity"]
         async_add_numbers = self.hass.data[DOMAIN]["add_number_entity"]
 
-        device_info = self.build_zone_device_info(zone_id, zone_name)
+        device_info = self.build_zone_device_info()
 
         self.zone_status_entity = ZoneStatusSensor(zone_id, zone_name, device_info, self)
         self.zone_run_trigger_entity = ZoneStartRunButton(zone_id, zone_name, device_info, self, zone_valves)
@@ -46,6 +46,10 @@ class SprinkleZoneCoordinator:
         async_add_sensors([self.zone_status_entity, self.zone_finish_time_entity])
         async_add_numbers([self.zone_run_timer_entity])
 
+    @property
+    def is_running(self):
+        return self.zone_status_entity.native_value in [const.ZONE_RUNNING, const.ZONE_AUTO_RUN]
+
 
     async def async_manual_run_button_pressed(self):
         if self.zone_status_entity.native_value == const.ZONE_IDLE:
@@ -56,15 +60,27 @@ class SprinkleZoneCoordinator:
 
     async def async_start_manual_run(self):
         if self.zone_status_entity.native_value == const.ZONE_IDLE:
+            #we first stop all cycles, that could interfere with this run.
+            main_coordinator: SprinkleCoordinator = self.hass.data[DOMAIN]["coordinator"]
+            if not main_coordinator:
+                return
+            await main_coordinator.async_stop_all_cycles()
             #Start a manual run cycle.
             self.zone_status_entity.set_status(const.ZONE_RUNNING)
             run_time = self.zone_run_timer_entity.native_value
             await self.async_start_run(run_time)
 
+    async def async_start_run_from_cycle(self, cycle_coordinator):
+        pass
+
     async def async_start_run(self, minutes):
         if self.zone_status_entity.native_value == const.ZONE_IDLE:
             return
-
+        main_coordinator: SprinkleCoordinator = self.hass.data[DOMAIN]["coordinator"]
+        if not main_coordinator:
+            return
+        #stop all zones before running this zone. We only stop zones here, upon manual start, we stop all cycles as well.
+        await main_coordinator.async_stop_all_zones()
         end_time = dt.now() + timedelta(minutes=minutes)
         if self.timer_callback_obj:
             self.timer_callback_obj()
@@ -94,12 +110,79 @@ class SprinkleZoneCoordinator:
     async def async_zone_timer_end_callback(self, now: datetime):
         await self.async_stop_run()
 
-    def build_zone_device_info(self, zone_id: str, zone_name: str):
+    def build_zone_device_info(self):
         return {
-            "identifiers": {(DOMAIN, zone_id)},
-            "name": zone_name,
+            "identifiers": {(DOMAIN, self.zone_id)},
+            "name": self.zone_name,
             "manufacturer": "bence056",
             "model": "Sprinkle Zone",
+            "sw_version": VERSION
+        }
+
+class SprinkleCycleCoordinator:
+    def __init__(self, hass, cycle_id, cycle_name, cycle_steps: list[SprinkleCycleStep]):
+        self.hass = hass
+        self.cycle_id = cycle_id
+        self.cycle_name = cycle_name
+        self.cycle_steps = cycle_steps
+        self.current_step_index = -1
+
+        device_info = self.build_cycle_device_info()
+
+        self.cycle_run_entity = CycleStartRunButton(cycle_id, cycle_name, device_info, self)
+        self.cycle_remaining_time_entity = CycleRemainingMinutes(cycle_id, cycle_name, device_info, self)
+
+        async_add_buttons = self.hass.data[DOMAIN]["add_button_entity"]
+        async_add_sensors = self.hass.data[DOMAIN]["add_sensor_entity"]
+        async_add_buttons([self.cycle_run_entity])
+        async_add_sensors([self.cycle_remaining_time_entity])
+
+        self.assigned_zones: list[SprinkleZoneCoordinator] = []
+        #load the zone coordinator references into an array.
+        main_coordinator: SprinkleCoordinator = self.hass.data[DOMAIN]["coordinator"]
+        if not main_coordinator:
+            return
+        for cycle_step in self.cycle_steps:
+            zone_coordinator = main_coordinator.zones[cycle_step.zone_id]
+            if cycle_step is not None:
+                self.assigned_zones.append(zone_coordinator)
+
+    @property
+    def is_running(self):
+        return self.current_step_index >= 0
+
+    async def async_start_cycle(self):
+
+        if self.current_step_index == -1 and len(self.assigned_zones) > 0:
+            #stop all zones and cycles that are currently running.
+            main_coordinator: SprinkleCoordinator = self.hass.data[DOMAIN]["coordinator"]
+            if not main_coordinator:
+                return
+            await main_coordinator.async_stop_all_cycles()
+            await main_coordinator.async_stop_all_zones()
+
+            #start a cycle.
+            await self.async_advance_cycle_zone()
+
+
+    async def async_advance_cycle_zone(self):
+
+        if self.current_step_index >= 0:
+            #start a new zone, it will auto stop everything else before running.
+            pass
+
+
+
+    async def async_stop_cycle(self):
+        pass
+
+
+    def build_cycle_device_info(self):
+        return {
+            "identifiers": {(DOMAIN, self.cycle_id)},
+            "name": self.cycle_name,
+            "manufacturer": "bence056",
+            "model": "Sprinkle Cycle",
             "sw_version": VERSION
         }
 
@@ -111,6 +194,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         self.id = entry.entry_id
         self.entry = entry
         self.zones: dict[str, SprinkleZoneCoordinator] = {}
+        self.cycles: dict[str, SprinkleCycleCoordinator] = {}
         super().__init__(hass, _LOGGER, name=DOMAIN)
 
 
@@ -153,16 +237,6 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         async_add_numbers([rain_delay_number_entity])
         async_add_buttons([rain_delay_setter_entity])
 
-
-
-    def build_cycle_device_info(self, cycle_id: str, cycle_name: str):
-        return {
-            "identifiers": {(DOMAIN, cycle_id)},
-            "name": cycle_name,
-            "manufacturer": "bence056",
-            "model": "Sprinkle Cycle",
-            "sw_version": VERSION
-        }
 
     async def async_get_device_id_from_zone(self, zone_id: str) -> str | None:
         dev_reg = async_get_device_registry(self.hass)
@@ -233,9 +307,6 @@ class SprinkleCoordinator(DataUpdateCoordinator):
 
         # create zone coordinator. It will create the entities as well.
         self.zones[zone_id] = SprinkleZoneCoordinator(self.hass, zone_id, zone_name, zone_valves)
-
-
-
         self.store.create_zone(data)
 
 
@@ -289,36 +360,19 @@ class SprinkleCoordinator(DataUpdateCoordinator):
 
     async def async_create_cycle(self, cycle_id: str, data: dict):
 
-        cycle_name = data[const.ATTR_CYCLE_NAME]
-        cycle_steps: data[const.ATTR_CYCLE_STEPS]
+        stored_cycle = self.store.create_or_modify_cycle(data)
+        if cycle_id not in self.cycles.keys():
+            #create the cycle coordinator and entities
+            self.cycles[cycle_id] = SprinkleCycleCoordinator(self.hass, cycle_id, stored_cycle.cycle_name, stored_cycle.cycle_steps)
 
-        device_info = self.build_cycle_device_info(cycle_id, cycle_name)
 
-        cycle_obj = self.store.create_or_modify_cycle(data)
-
-        cycle_run_entity = CycleStartRunButton(cycle_id, cycle_name, device_info, cycle_obj.cycle_steps)
-        cycle_remaining_time_entity = CycleRemainingMinutes(cycle_id, cycle_name, device_info)
-
-        async_add_buttons = self.hass.data[DOMAIN]["add_button_entity"]
-        async_add_sensors = self.hass.data[DOMAIN]["add_sensor_entity"]
-        async_add_buttons([cycle_run_entity])
-        async_add_sensors([cycle_remaining_time_entity])
-
-        # store them in hass.data for later reference.
-
-        cycle_structure = {
-            "run_trigger": cycle_run_entity,
-            "remaining_minutes": cycle_remaining_time_entity
-        }
-        self.hass.data[DOMAIN]["cycles"][cycle_id] = cycle_structure
 
     async def async_modify_cycle(self, cycle_id: str, data: dict):
-        cycle_set = self.hass.data[DOMAIN]["cycles"]
-        if cycle_id not in cycle_set:
+        if cycle_id not in self.cycles.keys():
             return
         edited_cycle = self.store.create_or_modify_cycle(data)
         #update entity data as well.
-        cycle_run_entity: CycleStartRunButton = cycle_set[cycle_id]["run_trigger"]
+        cycle_run_entity: CycleStartRunButton = self.cycles[cycle_id].cycle_run_entity
         cycle_run_entity._cycle_steps = edited_cycle.cycle_steps
 
     async def async_delete_cycle(self, cycle_id: str):
@@ -329,6 +383,11 @@ class SprinkleCoordinator(DataUpdateCoordinator):
             device_registry.async_remove_device(device_id)
             #remove from store.
             self.store.remove_cycle(cycle_id)
+            #remove its assigned coordinator as well.
+            if cycle_id in self.cycles.keys():
+                #stop any currently running cycle action
+                await self.cycles[cycle_id].async_stop_cycle()
+                del self.cycles[cycle_id]
 
 
     async def async_delete_config(self):
@@ -341,5 +400,16 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         if self.store.config.rain_delay_end_time_seconds != new_time:
             self.store.config.rain_delay_end_time_seconds = new_time
             self.store.async_queue_save()
+
+    async def async_stop_all_zones(self):
+        for zone in self.zones.values():
+            if zone.is_running:
+                await zone.async_stop_run()
+
+
+    async def async_stop_all_cycles(self):
+        for cycle in self.cycles.values():
+            if cycle.is_running:
+                await cycle.async_stop_cycle()
 
 

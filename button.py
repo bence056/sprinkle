@@ -73,11 +73,11 @@ class RainDelaySetterButton(ButtonEntity):
 
 
 class CycleStartRunButton(ButtonEntity):
-    def __init__(self, cycle_id, name, device_info, cycle_steps: list[SprinkleCycleStep]):
+    def __init__(self, cycle_id, name, device_info, coordinator):
         self._attr_unique_id = f"{DOMAIN}_{cycle_id}_start_run"
         self._attr_name = f"{name} Start Run"
         self._attr_device_info = device_info
-        self._cycle_steps = cycle_steps
+        self.coordinator = coordinator
 
     @property
     def device_info(self):

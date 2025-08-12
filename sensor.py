@@ -93,9 +93,10 @@ class RainDelayExpiry(SensorEntity):
 
 
 class CycleRemainingMinutes(SensorEntity):
-    def __init__(self, cycle_id, name, device_info):
+    def __init__(self, cycle_id, name, device_info, coordinator):
         self._attr_unique_id = f"{DOMAIN}_{cycle_id}_remaining_minutes"
         self._cycle_id = cycle_id
+        self._coordinator = coordinator
         self._attr_name = f"{name} Remaining Minutes"
         self._attr_device_info = device_info
         self._remaining_minutes = 3
