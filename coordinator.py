@@ -282,6 +282,13 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         for key,value in self.store.cycles.items():
             await self.async_create_cycle(key, attr.asdict(value))
 
+    async def async_rain_delay_setter_pressed(self):
+
+        hours = self.rain_delay_number_entity.native_value
+        self.rain_delay_expiry_entity.recalculate_next_time(hours)
+        await self.async_update_rain_delay_expiry(self.rain_delay_expiry_entity.native_value)
+        #TODO set system to be on rain delay.
+
     async def async_get_device_id_from_zone(self, zone_id: str) -> str | None:
         dev_reg = async_get_device_registry(self.hass)
         identifier = (DOMAIN, zone_id)

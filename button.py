@@ -65,10 +65,7 @@ class RainDelaySetterButton(ButtonEntity):
         return self._attr_device_info
 
     async def async_press(self):
-        hours = self._coordinator.rain_delay_number_entity.native_value
-        self._coordinator.rain_delay_expiry_entity.recalculate_next_time(hours)
-        coordinator = self.hass.data[DOMAIN]["coordinator"]
-        await coordinator.async_update_rain_delay_expiry(self._coordinator.rain_delay_expiry_entity.native_value)
+        await self._coordinator.async_rain_delay_setter_pressed()
 
 
 class CycleStartRunButton(ButtonEntity):
