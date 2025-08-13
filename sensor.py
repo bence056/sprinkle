@@ -88,12 +88,13 @@ class ZoneIrrigationFinishTime(SensorEntity):
 
 
 class RainDelayExpiry(SensorEntity):
-    def __init__(self, device_info, expire_seconds = int((dt.now() + timedelta(hours=6)).timestamp())):
+    def __init__(self, device_info, coordinator):
         self._attr_unique_id = f"{DOMAIN}_rain_delay_expiry"
         self._attr_name = f"Rain Delay Expiry"
         self._attr_device_info = device_info
+        self_coordinator = coordinator
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
-        self._next_time = dt.as_local(dt.utc_from_timestamp(expire_seconds))
+        self._next_time = dt.as_local(dt.utc_from_timestamp(int((dt.now() + timedelta(hours=6)).timestamp())))
 
     @property
     def device_info(self):

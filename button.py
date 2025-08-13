@@ -54,22 +54,21 @@ class ZoneStartRunButton(ButtonEntity):
         self.async_write_ha_state()
 
 class RainDelaySetterButton(ButtonEntity):
-    def __init__(self, device_info, rain_delay_value_entity: RainDelayDurationNumber, rain_delay_expiry_entity: RainDelayExpiry):
+    def __init__(self, device_info, coordinator):
         self._attr_unique_id = f"{DOMAIN}_activate_rain_delay"
         self._attr_name = f"Activate Rain Delay"
         self._attr_device_info = device_info
-        self._rain_delay_value = rain_delay_value_entity
-        self._rain_delay_expiry = rain_delay_expiry_entity
+        self._coordinator = coordinator
 
     @property
     def device_info(self):
         return self._attr_device_info
 
     async def async_press(self):
-        hours = self._rain_delay_value.native_value
-        self._rain_delay_expiry.recalculate_next_time(hours)
+        hours = self._coordinator.rain_delay_number_entity.native_value
+        self._coordinator.rain_delay_expiry_entity.recalculate_next_time(hours)
         coordinator = self.hass.data[DOMAIN]["coordinator"]
-        await coordinator.async_update_rain_delay_expiry(self._rain_delay_expiry.native_value)
+        await coordinator.async_update_rain_delay_expiry(self._coordinator.rain_delay_expiry_entity.native_value)
 
 
 class CycleStartRunButton(ButtonEntity):

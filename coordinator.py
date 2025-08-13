@@ -22,10 +22,10 @@ from .store import SprinkleStorage, SprinkleZone, SprinkleCycleStep, SprinkleCyc
 _LOGGER = logging.getLogger(__name__)
 
 class SprinkleZoneCoordinator:
-    def __init__(self, hass, zone_id, zone_name, zone_valves):
+    def __init__(self, hass, main_coordinator, zone_id, zone_name, zone_valves):
 
         self.hass = hass
-        self.coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
+        self.coordinator: SprinkleCoordinator = main_coordinator
         self.zone_id = zone_id
         self.zone_name = zone_name
         self.zone_valves = zone_valves
@@ -140,9 +140,9 @@ class SprinkleZoneCoordinator:
         }
 
 class SprinkleCycleCoordinator:
-    def __init__(self, hass, cycle_id, cycle_name, cycle_steps: list[SprinkleCycleStep]):
+    def __init__(self, hass, main_coordinator, cycle_id, cycle_name, cycle_steps: list[SprinkleCycleStep]):
         self.hass = hass
-        self.coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
+        self.coordinator: SprinkleCoordinator = main_coordinator
         self.cycle_id = cycle_id
         self.cycle_name = cycle_name
         self.cycle_steps: list[SprinkleCycleStep] = []
@@ -244,6 +244,9 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         self.store: SprinkleStorage = store
         self.id = entry.entry_id
         self.entry = entry
+        self.rain_delay_setter_entity = None
+        self.rain_delay_number_entity = None
+        self.rain_delay_expiry_entity = None
         self.zones: dict[str, SprinkleZoneCoordinator] = {}
         self.cycles: dict[str, SprinkleCycleCoordinator] = {}
         self.active_zone = None
@@ -251,16 +254,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         super().__init__(hass, _LOGGER, name=DOMAIN)
 
 
-    async def load_entities(self):
-
-        await self.async_create_config_entities()
-
-        for key,value in self.store.zones.items():
-            await self.async_create_zone(key, attr.asdict(value))
-        for key,value in self.store.cycles.items():
-            await self.async_create_cycle(key, attr.asdict(value))
-
-    async def async_create_config_entities(self):
+    async def async_setup(self):
 
         device_info = {
             "identifiers": {(DOMAIN, self.entry.unique_id)},
@@ -274,22 +268,19 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         async_add_sensors = self.hass.data[DOMAIN]["add_sensor_entity"]
         async_add_numbers = self.hass.data[DOMAIN]["add_number_entity"]
 
-        rain_delay_number_entity = RainDelayDurationNumber(device_info)
-        rain_delay_expiry_entity = RainDelayExpiry(device_info, self.store.config.rain_delay_end_time_seconds)
-        rain_delay_setter_entity = RainDelaySetterButton(device_info, rain_delay_number_entity, rain_delay_expiry_entity)
 
-        config_entities = {
-            "rain_delay_number": rain_delay_number_entity,
-            "rain_delay_expiry": rain_delay_expiry_entity,
-            "rain_delay_setter": rain_delay_setter_entity
-        }
+        self.rain_delay_number_entity = RainDelayDurationNumber(device_info, self)
+        self.rain_delay_expiry_entity = RainDelayExpiry(device_info, self)
+        self.rain_delay_setter_entity = RainDelaySetterButton(device_info, self)
 
-        self.hass.data[DOMAIN]["config"]["entities"] = config_entities
+        async_add_sensors([self.rain_delay_expiry_entity])
+        async_add_numbers([self.rain_delay_number_entity])
+        async_add_buttons([self.rain_delay_setter_entity])
 
-        async_add_sensors([rain_delay_expiry_entity])
-        async_add_numbers([rain_delay_number_entity])
-        async_add_buttons([rain_delay_setter_entity])
-
+        for key,value in self.store.zones.items():
+            await self.async_create_zone(key, attr.asdict(value))
+        for key,value in self.store.cycles.items():
+            await self.async_create_cycle(key, attr.asdict(value))
 
     async def async_get_device_id_from_zone(self, zone_id: str) -> str | None:
         dev_reg = async_get_device_registry(self.hass)
@@ -365,7 +356,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         zone_valves = data[const.ATTR_ZONE_VALVES]
 
         # create zone coordinator. It will create the entities as well.
-        self.zones[zone_id] = SprinkleZoneCoordinator(self.hass, zone_id, zone_name, zone_valves)
+        self.zones[zone_id] = SprinkleZoneCoordinator(self.hass, self, zone_id, zone_name, zone_valves)
         self.store.create_zone(data)
 
 
@@ -420,7 +411,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         stored_cycle = self.store.create_or_modify_cycle(data)
         if cycle_id not in self.cycles.keys():
             #create the cycle coordinator and entities
-            self.cycles[cycle_id] = SprinkleCycleCoordinator(self.hass, cycle_id, stored_cycle.cycle_name, stored_cycle.cycle_steps)
+            self.cycles[cycle_id] = SprinkleCycleCoordinator(self.hass, self, cycle_id, stored_cycle.cycle_name, stored_cycle.cycle_steps)
 
 
 

@@ -47,10 +47,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     store_obj = await async_get_registry(hass)
     coordinator = SprinkleCoordinator(hass, entry, store_obj)
-
+    await coordinator.async_setup()
     hass.data[const.DOMAIN]["coordinator"] = coordinator
-
-    await coordinator.load_entities()
 
 
 
