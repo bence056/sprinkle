@@ -1,19 +1,10 @@
-from datetime import timedelta, datetime
-from typing import Mapping, Any
+from datetime import timedelta
 
 from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
-from homeassistant.const import UnitOfTime
-from homeassistant.helpers.entity import Entity, DeviceInfo
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt
-from homeassistant.helpers.event import async_track_point_in_utc_time
-from tests.components.cover.test_init import set_state
-from .const import DOMAIN, ZONE_RUNNING_CYCLE, ZONE_IDLE, ZONE_RAIN_DELAY, ZONE_RUNNING_MANUAL
-import asyncio
-
-from .number import RainDelayDurationNumber
-
+from .const import DOMAIN, ZONE_RUNNING_CYCLE, ZONE_IDLE, ZONE_RAIN_DELAY, ZONE_RUNNING_MANUAL, CYCLE_IDLE, CYCLE_RAIN_DELAY, CYCLE_RUNNING
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
 
@@ -26,9 +17,35 @@ class ZoneStatusSensor(SensorEntity):
         self._attr_unique_id = f"{DOMAIN}_{zone_id}_status"
         self._attr_name = f"{name} Status"
         self._zone_coordinator = zone_coordinator
+        self.device_class = SensorDeviceClass.ENUM
+        self.options = [ZONE_IDLE, ZONE_RUNNING_MANUAL, ZONE_RUNNING_CYCLE, ZONE_RAIN_DELAY]
         self._attr_icon = "mdi:valve"
         self._attr_device_info = device_info
         self._status = ZONE_IDLE
+
+    @property
+    def device_info(self):
+        return self._attr_device_info
+
+    @property
+    def native_value(self):
+        return self._status
+
+    def set_status(self, status):
+        self._status = status
+        self.async_write_ha_state()
+
+
+class CycleStatusSensor(SensorEntity):
+    def __init__(self, cycle_id, name, device_info, cycle_coordinator):
+        self._attr_unique_id = f"{DOMAIN}_{cycle_id}_status"
+        self._attr_name = f"{name} Status"
+        self._coordinator = cycle_coordinator
+        self.device_class = SensorDeviceClass.ENUM
+        self.options = [CYCLE_IDLE, CYCLE_RUNNING, CYCLE_RAIN_DELAY]
+        self._attr_icon = "mdi:sprinkler-variant"
+        self._attr_device_info = device_info
+        self._status = CYCLE_IDLE
 
     @property
     def device_info(self):

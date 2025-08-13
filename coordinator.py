@@ -9,13 +9,14 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
 from homeassistant.helpers.event import async_track_point_in_time
 from .button import ZoneStartRunButton, CycleStartRunButton, RainDelaySetterButton
-from .const import DOMAIN, VERSION
+from .const import DOMAIN, VERSION, CYCLE_RUNNING, CYCLE_IDLE
 from homeassistant.util import dt
 from . import const
 import logging
 
 from .number import ZoneRunDurationNumber, RainDelayDurationNumber
-from .sensor import ZoneStatusSensor, ZoneIrrigationFinishTime, RainDelayExpiry, CycleRemainingMinutes
+from .sensor import ZoneStatusSensor, ZoneIrrigationFinishTime, RainDelayExpiry, CycleRemainingMinutes, \
+    CycleStatusSensor
 from .store import SprinkleStorage, SprinkleZone, SprinkleCycleStep, SprinkleCycle
 
 _LOGGER = logging.getLogger(__name__)
@@ -149,13 +150,14 @@ class SprinkleCycleCoordinator:
 
         device_info = self.build_cycle_device_info()
 
+        self.cycle_status_entity = CycleStatusSensor(cycle_id, cycle_name, device_info, self)
         self.cycle_run_entity = CycleStartRunButton(cycle_id, cycle_name, device_info, self)
         self.cycle_end_timestamp_entity = CycleRemainingMinutes(cycle_id, cycle_name, device_info, self)
 
         async_add_buttons = self.hass.data[DOMAIN]["add_button_entity"]
         async_add_sensors = self.hass.data[DOMAIN]["add_sensor_entity"]
         async_add_buttons([self.cycle_run_entity])
-        async_add_sensors([self.cycle_end_timestamp_entity])
+        async_add_sensors([self.cycle_end_timestamp_entity, self.cycle_status_entity])
 
         self.assigned_zones: list[SprinkleZoneCoordinator] = []
         #load the zone coordinator references into an array.
@@ -185,6 +187,7 @@ class SprinkleCycleCoordinator:
             for cycle_step in self.cycle_steps:
                 total_minutes += cycle_step.zone_minutes
             self.cycle_end_timestamp_entity.set_finish_timestamp(dt.now() + timedelta(seconds=total_minutes))
+            self.cycle_status_entity.set_status(CYCLE_RUNNING)
             await self.async_advance_cycle_zone()
 
 
@@ -214,6 +217,7 @@ class SprinkleCycleCoordinator:
         self.current_step_index = -1
         self.coordinator.active_cycle = None
         self.cycle_end_timestamp_entity.set_finish_timestamp(None)
+        self.cycle_status_entity.set_status(CYCLE_IDLE)
 
     def update_cycle_steps(self, cycle_steps: list[SprinkleCycleStep]):
         self.cycle_steps = cycle_steps
