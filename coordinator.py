@@ -63,18 +63,16 @@ class SprinkleZoneCoordinator:
 
 
     async def async_manual_run_button_pressed(self):
-
-        if not self.is_running:
-            #zone is not running in any state, we want to start it manually now.
-            await self.async_start_manual_run()
+        #TODO fix call order, zone start needs to cancel all active cycles, not just the assigned one.
+        if self.is_manually_running:
+            #stop the zone manual run.
+            await self.async_stop_run()
         else:
-            if self.is_manually_running:
-                # We need to stop this zone only, because this is the only running zone.
-                await self.async_stop_run()
-            else:
-                # The zone is running, and it is controlled by a cycle, we need to cancel the active cycle, and start this zone manually.
-                await self.coordinator.async_stop_active_cycle()
-                await self.async_start_manual_run()
+            #stop active cycle and zone.
+            await self.coordinator.async_stop_active_cycle()
+            await self.coordinator.async_stop_active_zone()
+            #run this zone manually.
+            await self.async_start_manual_run()
 
 
     async def async_start_manual_run(self):
@@ -459,11 +457,11 @@ class SprinkleCoordinator(DataUpdateCoordinator):
 
     async def async_stop_active_cycle(self):
         if self.active_cycle is not None:
-            self.active_cycle.async_stop_cycle()
+            await self.active_cycle.async_stop_cycle()
 
     async def async_stop_active_zone(self):
         if self.active_zone is not None:
-            self.active_zone.async_stop_run()
+            await self.active_zone.async_stop_run()
 
 def try_get_coordinator(hass: HomeAssistant) -> SprinkleCoordinator:
     return hass.data[const.DOMAIN]["coordinator"]
