@@ -9,7 +9,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
 from homeassistant.helpers.event import async_track_point_in_time
 from .button import ZoneStartRunButton, CycleStartRunButton, RainDelaySetterButton
-from .const import DOMAIN, VERSION, CYCLE_RUNNING, CYCLE_IDLE
+from .const import DOMAIN, VERSION, CYCLE_RUNNING, CYCLE_IDLE, ZONE_RAIN_DELAY
 from homeassistant.util import dt
 from . import const
 import logging
@@ -50,6 +50,13 @@ class SprinkleZoneCoordinator:
         async_add_sensors([self.zone_status_entity, self.zone_finish_time_entity])
         async_add_numbers([self.zone_run_timer_entity])
 
+    async def async_update_rain_delay_status(self):
+        if self.coordinator.rain_delay_active:
+            await self.async_stop_run()
+            self.zone_status_entity.set_status(const.ZONE_RAIN_DELAY)
+        else:
+            self.zone_status_entity.set_status(const.ZONE_IDLE)
+
     @property
     def is_manually_running(self):
         return self.zone_running and self.controlling_cycle is None
@@ -77,8 +84,9 @@ class SprinkleZoneCoordinator:
 
 
     async def async_start_manual_run(self):
-        if self.zone_status_entity.native_value == const.ZONE_IDLE:
-
+        if not self.is_running:
+            if self.coordinator.rain_delay_active:
+                return
             #Start a manual run cycle.
             self.zone_status_entity.set_status(const.ZONE_RUNNING_MANUAL)
             self.zone_running = True
@@ -86,6 +94,8 @@ class SprinkleZoneCoordinator:
             await self.async_start_run(run_time)
 
     async def async_start_run_from_cycle(self, cycle_coordinator, minutes):
+        if self.coordinator.rain_delay_active:
+            return
         self.controlling_cycle = cycle_coordinator
         self.zone_running = True
         self.zone_status_entity.set_status(const.ZONE_RUNNING_CYCLE)
@@ -164,6 +174,14 @@ class SprinkleCycleCoordinator:
         self.update_cycle_steps(cycle_steps)
 
 
+    async def async_update_rain_delay_status(self):
+        if self.coordinator.rain_delay_active:
+            await self.async_stop_cycle()
+            self.cycle_status_entity.set_status(const.CYCLE_RAIN_DELAY)
+        else:
+            self.cycle_status_entity.set_status(const.CYCLE_IDLE)
+
+
     @property
     def is_running(self):
         return self.current_step_index >= 0
@@ -180,6 +198,8 @@ class SprinkleCycleCoordinator:
     async def async_start_cycle(self):
 
         if self.current_step_index == -1 and len(self.assigned_zones) > 0:
+            if self.coordinator.rain_delay_active:
+                return
             #start a cycle.
             self.coordinator.active_cycle = self
             #set the estimated end timestamp on the cycle.
@@ -251,6 +271,8 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         self.cycles: dict[str, SprinkleCycleCoordinator] = {}
         self.active_zone = None
         self.active_cycle = None
+        self.rain_delay_callback_obj = None
+        self.rain_delay_active = False
         super().__init__(hass, _LOGGER, name=DOMAIN)
 
 
@@ -282,12 +304,51 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         for key,value in self.store.cycles.items():
             await self.async_create_cycle(key, attr.asdict(value))
 
+        #handle rain delay configuration upon starting.
+        await self.async_process_rain_delay()
+
     async def async_rain_delay_setter_pressed(self):
 
         hours = self.rain_delay_number_entity.native_value
         self.rain_delay_expiry_entity.recalculate_next_time(hours)
         await self.async_update_rain_delay_expiry(self.rain_delay_expiry_entity.native_value)
-        #TODO set system to be on rain delay.
+
+    async def async_process_rain_delay(self):
+        expiry_timestamp: datetime = dt.as_local(dt.utc_from_timestamp(self.store.config.rain_delay_end_time_seconds))
+        #if we have a rain delay callback set, just end it, we will set it again
+        if self.rain_delay_callback_obj:
+            self.rain_delay_callback_obj()
+        if expiry_timestamp > dt.now():
+            #we set rain delay to on, and we create a callback for expiry.
+            await self.async_activate_rain_delay()
+            self.rain_delay_callback_obj = async_track_point_in_time(self.hass, self.async_rain_delay_expiry_callback, expiry_timestamp)
+        else:
+            await self.async_deactivate_rain_delay()
+
+    async def async_rain_delay_expiry_callback(self, now: datetime):
+        # we deactivate rain delay.
+        await self.async_deactivate_rain_delay()
+
+    async def async_activate_rain_delay(self):
+        self.rain_delay_active = True
+        for zone in self.zones.values():
+            await zone.async_update_rain_delay_status()
+        for cycle in self.cycles.values():
+            await cycle.async_update_rain_delay_status()
+
+
+
+    async def async_deactivate_rain_delay(self):
+        #we cancel callbacks again just in case.
+        if self.rain_delay_callback_obj:
+            self.rain_delay_callback_obj()
+        self.rain_delay_active = False
+        for zone in self.zones.values():
+            await zone.async_update_rain_delay_status()
+        for cycle in self.cycles.values():
+            await cycle.async_update_rain_delay_status()
+
+
 
     async def async_get_device_id_from_zone(self, zone_id: str) -> str | None:
         dev_reg = async_get_device_registry(self.hass)
@@ -454,6 +515,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         if self.store.config.rain_delay_end_time_seconds != new_time:
             self.store.config.rain_delay_end_time_seconds = new_time
             self.store.async_queue_save()
+            await self.async_process_rain_delay()
 
     async def async_stop_all_cycles_and_zones(self):
         for cycle in self.cycles.values():
