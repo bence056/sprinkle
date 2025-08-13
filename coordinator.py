@@ -104,7 +104,7 @@ class SprinkleZoneCoordinator:
     async def async_start_run(self, minutes):
         if self.zone_status_entity.native_value == const.ZONE_IDLE:
             return
-        end_time = dt.now() + timedelta(seconds=minutes)
+        end_time = dt.now() + timedelta(minutes=minutes)
         if self.timer_callback_obj:
             self.timer_callback_obj()
         self.zone_manual_expiry_timestamp = end_time
@@ -206,7 +206,7 @@ class SprinkleCycleCoordinator:
             total_minutes = 0
             for cycle_step in self.cycle_steps:
                 total_minutes += cycle_step.zone_minutes
-            self.cycle_end_timestamp_entity.set_finish_timestamp(dt.now() + timedelta(seconds=total_minutes))
+            self.cycle_end_timestamp_entity.set_finish_timestamp(dt.now() + timedelta(minutes=total_minutes))
             self.cycle_status_entity.set_status(CYCLE_RUNNING)
             await self.async_advance_cycle_zone()
 
