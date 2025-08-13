@@ -92,9 +92,9 @@ class RainDelayExpiry(SensorEntity):
         self._attr_unique_id = f"{DOMAIN}_rain_delay_expiry"
         self._attr_name = f"Rain Delay Expiry"
         self._attr_device_info = device_info
-        self_coordinator = coordinator
+        self._coordinator = coordinator
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
-        self._next_time = dt.as_local(dt.utc_from_timestamp(int((dt.now() + timedelta(hours=6)).timestamp())))
+        self._next_time = dt.as_local(dt.utc_from_timestamp(self._coordinator.store.config.rain_delay_end_time_seconds))
 
     @property
     def device_info(self):
