@@ -1,5 +1,5 @@
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall
 import logging
 
 from .websocket import register_websockets
@@ -12,6 +12,8 @@ from .panel import (
     async_unregister_panel
 )
 
+import voluptuous as vol
+import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
 
 
@@ -59,6 +61,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     #load the saved config from storage and create entities.
 
+    def handle_test_service(call: ServiceCall):
+        _LOGGER.info(call.data["test_entry"])
+
+    hass.services.async_register(DOMAIN, "sprinkle_test", handle_test_service,
+                           vol.Schema(
+                               {
+                                   vol.Required("test_entry", default=""): cv.entity_ids
+                               }
+                           ))
 
     return True
 

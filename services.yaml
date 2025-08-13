@@ -1,0 +1,9 @@
+sprinkle_test:
+  description: "A test service that takes a string input."
+  fields:
+    test_entry:
+      description: "The text to use for testing."
+      example: "Hello World"
+      required: true
+      selector:
+        text:
