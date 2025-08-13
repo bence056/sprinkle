@@ -51,7 +51,7 @@ class ZoneStatusSensor(SensorEntity):
 class ZoneIrrigationFinishTime(SensorEntity):
     def __init__(self, zone_id, name, device_info, zone_coordinator):
         self._attr_unique_id = f"{DOMAIN}_{zone_id}_finish_timestamp"
-        self._attr_name = f"{name} Watering End Time"
+        self._attr_name = f"{name} Zone End Time"
         self._zone_coordinator = zone_coordinator
         self._attr_device_info = device_info
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
@@ -94,12 +94,13 @@ class RainDelayExpiry(SensorEntity):
 
 class CycleRemainingMinutes(SensorEntity):
     def __init__(self, cycle_id, name, device_info, coordinator):
-        self._attr_unique_id = f"{DOMAIN}_{cycle_id}_remaining_minutes"
+        self._attr_unique_id = f"{DOMAIN}_{cycle_id}_finish_timestamp"
         self._cycle_id = cycle_id
         self._coordinator = coordinator
-        self._attr_name = f"{name} Remaining Minutes"
+        self._attr_device_class = SensorDeviceClass.TIMESTAMP
+        self._attr_name = f"{name} Cycle End Time"
         self._attr_device_info = device_info
-        self._remaining_minutes = None
+        self._end_time = None
 
     @property
     def device_info(self):
@@ -107,8 +108,8 @@ class CycleRemainingMinutes(SensorEntity):
 
     @property
     def native_value(self):
-        return self._remaining_minutes
+        return self._end_time
 
-    @property
-    def native_unit_of_measurement(self):
-        return UnitOfTime.MINUTES
+    def set_finish_timestamp(self, timestamp):
+        self._end_time = timestamp
+        self.async_write_ha_state()

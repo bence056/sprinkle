@@ -144,18 +144,18 @@ class SprinkleCycleCoordinator:
         self.coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
         self.cycle_id = cycle_id
         self.cycle_name = cycle_name
-        self.cycle_steps = []
+        self.cycle_steps: list[SprinkleCycleStep] = []
         self.current_step_index = -1
 
         device_info = self.build_cycle_device_info()
 
         self.cycle_run_entity = CycleStartRunButton(cycle_id, cycle_name, device_info, self)
-        self.cycle_remaining_time_entity = CycleRemainingMinutes(cycle_id, cycle_name, device_info, self)
+        self.cycle_end_timestamp_entity = CycleRemainingMinutes(cycle_id, cycle_name, device_info, self)
 
         async_add_buttons = self.hass.data[DOMAIN]["add_button_entity"]
         async_add_sensors = self.hass.data[DOMAIN]["add_sensor_entity"]
         async_add_buttons([self.cycle_run_entity])
-        async_add_sensors([self.cycle_remaining_time_entity])
+        async_add_sensors([self.cycle_end_timestamp_entity])
 
         self.assigned_zones: list[SprinkleZoneCoordinator] = []
         #load the zone coordinator references into an array.
@@ -180,6 +180,11 @@ class SprinkleCycleCoordinator:
         if self.current_step_index == -1 and len(self.assigned_zones) > 0:
             #start a cycle.
             self.coordinator.active_cycle = self
+            #set the estimated end timestamp on the cycle.
+            total_minutes = 0
+            for cycle_step in self.cycle_steps:
+                total_minutes += cycle_step.zone_minutes
+            self.cycle_end_timestamp_entity.set_finish_timestamp(dt.now() + timedelta(seconds=total_minutes))
             await self.async_advance_cycle_zone()
 
 
@@ -208,6 +213,7 @@ class SprinkleCycleCoordinator:
                 await self.assigned_zones[self.current_step_index].async_stop_run()
         self.current_step_index = -1
         self.coordinator.active_cycle = None
+        self.cycle_end_timestamp_entity.set_finish_timestamp(None)
 
     def update_cycle_steps(self, cycle_steps: list[SprinkleCycleStep]):
         self.cycle_steps = cycle_steps
