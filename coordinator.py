@@ -524,6 +524,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         for zone in self.zones.values():
             if zone.is_running:
                 await zone.async_stop_run()
+        _LOGGER.info("All zones and cycles have been stopped.")
 
     async def async_stop_active_cycle(self):
         if self.active_cycle is not None:
