@@ -22,9 +22,14 @@ PLATFORMS = ["sensor", "switch", "button", "number"]
 
 #Zone Status options
 ZONE_IDLE = "Idle"
-ZONE_RUNNING = "Running (Manual)"
-ZONE_AUTO_RUN = "Running (Automatic)"
-ZONE_RAIN_DELAY = "Rain Delay Active"
+ZONE_RUNNING_MANUAL = "Running (Manual)"
+ZONE_RUNNING_CYCLE = "Running (From Cycle)"
+ZONE_RAIN_DELAY = "Inactive (Rain Delay Active)"
+
+#Cycle Status options
+CYCLE_IDLE = "Idle"
+CYCLE_RUNNING = "Running"
+CYCLE_RAIN_DELAY = ZONE_RAIN_DELAY
 
 
 #Http attributes

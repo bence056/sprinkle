@@ -4,7 +4,7 @@ from homeassistant.components.button import ButtonEntity
 from homeassistant.helpers.entity import Entity, DeviceInfo
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from .const import DOMAIN, ZONE_IDLE, ZONE_RUNNING
+from .const import DOMAIN, ZONE_IDLE, ZONE_RUNNING_MANUAL
 import asyncio
 
 import logging
@@ -26,7 +26,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 class ZoneStartRunButton(ButtonEntity):
     def __init__(self, zone_id, name, device_info, zone_coordinator, zone_valves: list[str]):
         self._attr_unique_id = f"{DOMAIN}_{zone_id}_manual_run"
-        self._attr_name = f"{name} Start/Stop Run"
+        self._attr_name = f"{name} Start/Stop Zone"
         self._attr_device_info = device_info
         self._zone_coordinator = zone_coordinator
         self._zone_valves = zone_valves
@@ -73,15 +73,15 @@ class RainDelaySetterButton(ButtonEntity):
 
 
 class CycleStartRunButton(ButtonEntity):
-    def __init__(self, cycle_id, name, device_info, cycle_steps: list[SprinkleCycleStep]):
-        self._attr_unique_id = f"{DOMAIN}_{cycle_id}_start_run"
-        self._attr_name = f"{name} Start Run"
+    def __init__(self, cycle_id, name, device_info, coordinator):
+        self._attr_unique_id = f"{DOMAIN}_{cycle_id}_cycle_run"
+        self._attr_name = f"{name} Start/Stop Cycle"
         self._attr_device_info = device_info
-        self._cycle_steps = cycle_steps
+        self.coordinator = coordinator
 
     @property
     def device_info(self):
         return self._attr_device_info
 
     async def async_press(self):
-        pass
+        await self.coordinator.async_start_cycle_button_pressed()

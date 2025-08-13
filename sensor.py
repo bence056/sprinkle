@@ -1,19 +1,10 @@
-from datetime import timedelta, datetime
-from typing import Mapping, Any
+from datetime import timedelta
 
 from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
-from homeassistant.const import UnitOfTime
-from homeassistant.helpers.entity import Entity, DeviceInfo
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt
-from homeassistant.helpers.event import async_track_point_in_utc_time
-from tests.components.cover.test_init import set_state
-from .const import DOMAIN, ZONE_AUTO_RUN, ZONE_IDLE, ZONE_RAIN_DELAY, ZONE_RUNNING
-import asyncio
-
-from .number import RainDelayDurationNumber
-
+from .const import DOMAIN, ZONE_RUNNING_CYCLE, ZONE_IDLE, ZONE_RAIN_DELAY, ZONE_RUNNING_MANUAL, CYCLE_IDLE, CYCLE_RAIN_DELAY, CYCLE_RUNNING
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
 
@@ -26,9 +17,35 @@ class ZoneStatusSensor(SensorEntity):
         self._attr_unique_id = f"{DOMAIN}_{zone_id}_status"
         self._attr_name = f"{name} Status"
         self._zone_coordinator = zone_coordinator
+        self.device_class = SensorDeviceClass.ENUM
+        self.options = [ZONE_IDLE, ZONE_RUNNING_MANUAL, ZONE_RUNNING_CYCLE, ZONE_RAIN_DELAY]
         self._attr_icon = "mdi:valve"
         self._attr_device_info = device_info
         self._status = ZONE_IDLE
+
+    @property
+    def device_info(self):
+        return self._attr_device_info
+
+    @property
+    def native_value(self):
+        return self._status
+
+    def set_status(self, status):
+        self._status = status
+        self.async_write_ha_state()
+
+
+class CycleStatusSensor(SensorEntity):
+    def __init__(self, cycle_id, name, device_info, cycle_coordinator):
+        self._attr_unique_id = f"{DOMAIN}_{cycle_id}_status"
+        self._attr_name = f"{name} Status"
+        self._coordinator = cycle_coordinator
+        self.device_class = SensorDeviceClass.ENUM
+        self.options = [CYCLE_IDLE, CYCLE_RUNNING, CYCLE_RAIN_DELAY]
+        self._attr_icon = "mdi:sprinkler-variant"
+        self._attr_device_info = device_info
+        self._status = CYCLE_IDLE
 
     @property
     def device_info(self):
@@ -51,7 +68,7 @@ class ZoneStatusSensor(SensorEntity):
 class ZoneIrrigationFinishTime(SensorEntity):
     def __init__(self, zone_id, name, device_info, zone_coordinator):
         self._attr_unique_id = f"{DOMAIN}_{zone_id}_finish_timestamp"
-        self._attr_name = f"{name} Watering End Time"
+        self._attr_name = f"{name} Zone End Time"
         self._zone_coordinator = zone_coordinator
         self._attr_device_info = device_info
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
@@ -93,12 +110,14 @@ class RainDelayExpiry(SensorEntity):
 
 
 class CycleRemainingMinutes(SensorEntity):
-    def __init__(self, cycle_id, name, device_info):
-        self._attr_unique_id = f"{DOMAIN}_{cycle_id}_remaining_minutes"
+    def __init__(self, cycle_id, name, device_info, coordinator):
+        self._attr_unique_id = f"{DOMAIN}_{cycle_id}_finish_timestamp"
         self._cycle_id = cycle_id
-        self._attr_name = f"{name} Remaining Minutes"
+        self._coordinator = coordinator
+        self._attr_device_class = SensorDeviceClass.TIMESTAMP
+        self._attr_name = f"{name} Cycle End Time"
         self._attr_device_info = device_info
-        self._remaining_minutes = 3
+        self._end_time = None
 
     @property
     def device_info(self):
@@ -106,8 +125,8 @@ class CycleRemainingMinutes(SensorEntity):
 
     @property
     def native_value(self):
-        return self._remaining_minutes
+        return self._end_time
 
-    @property
-    def native_unit_of_measurement(self):
-        return UnitOfTime.MINUTES
+    def set_finish_timestamp(self, timestamp):
+        self._end_time = timestamp
+        self.async_write_ha_state()
