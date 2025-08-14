@@ -1,10 +1,9 @@
 from homeassistant.components.number import NumberEntity
-from homeassistant.const import UnitOfTime
-from homeassistant.helpers.entity import Entity, DeviceInfo
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant
 from .const import DOMAIN
-import asyncio
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
 

@@ -1,17 +1,14 @@
-import logging
 from datetime import timedelta
-
-import attr
 from typing import List, cast, MutableMapping
 
-from homeassistant.components.recorder.queries import attributes_ids_exist_in_states_with_fast_in_distinct
+import attr
+
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import storage
 from homeassistant.helpers.storage import Store
-from tests.components.mqtt.test_diagnostics import default_entry_data
-from .const import STORAGE_KEY, STORAGE_VERSION, DOMAIN, DATA_REGISTRY, SAVE_DELAY
-from . import const
 from homeassistant.util import dt
+from . import const
+from .const import STORAGE_KEY, STORAGE_VERSION, DATA_REGISTRY, SAVE_DELAY
+
 
 @attr.s(slots=True, frozen=False)
 class SprinkleConfig:
