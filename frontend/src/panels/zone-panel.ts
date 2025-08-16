@@ -147,7 +147,9 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
                         `)}
                     </div>
                 </div>
-                <ha-button slot="primaryAction" dialogAction="save" @click=${this.saveZone}>Save</ha-button>
+                <ha-button slot="primaryAction" dialogAction="save"
+                           @click=${this.saveZone}
+                           .disabled=${this.zoneNameInput == "" || this.selectedValves.size <= 0}>Save</ha-button>
                 <ha-button slot="secondaryAction" dialogAction="cancel" @click=${this.closeZoneDialog}>Cancel</ha-button>
             </ha-dialog>
         `;

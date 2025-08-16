@@ -219,7 +219,9 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
                     <ha-button @click=${this.addStep}>Add Step</ha-button>
                 </div>
 
-                <ha-button slot="primaryAction" dialogAction="save" @click=${this.saveCycle}>Save</ha-button>
+                <ha-button slot="primaryAction" dialogAction="save"
+                           @click=${this.saveCycle}
+                           .disabled=${this.cycleNameInput == "" || this.currentSteps.length <= 0}>Save</ha-button>
                 <ha-button slot="secondaryAction" dialogAction="cancel" @click=${this.closeCycleDialog}>Cancel</ha-button>
             </ha-dialog>
         `;
