@@ -29,7 +29,8 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
         this.cycles = await getCycles(this.hass);
         console.log(this.cycles);
         const zones = await getZones(this.hass);
-        this.availableZones = zones.map(z => ({ id: z.zone_id, name: z.zone_name }));
+        this.availableZones = zones.sort((a,b)=>a.zone_name.localeCompare(b.zone_name))
+            .map(z => ({ id: z.zone_id, name: z.zone_name }));
         this.requestUpdate();
     }
 

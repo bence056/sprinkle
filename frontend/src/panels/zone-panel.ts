@@ -132,7 +132,10 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
                             ?disabled=${this.zoneDialogModifyOnly}
                     ></ha-textfield>
                     <div class="valve-checkboxes">
-                        ${getValveEntities(this.hass).map(id => html`
+                        ${getValveEntities(this.hass)
+                                .sort((a,b) => 
+                                getValveName(this.hass, a).localeCompare(getValveName(this.hass, b)))
+                                .map(id => html`
                             <label class="valve-select-row">
                                 <ha-checkbox
                                         .checked=${this.selectedValves.has(id)}
