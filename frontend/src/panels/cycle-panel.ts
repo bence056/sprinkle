@@ -166,7 +166,7 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
     private renderCycleDialog() {
         if (!this.cycleDialogOpen) return null;
         return html`
-            <ha-dialog open .heading="${this.editingCycle ? 'Modify Cycle' : 'Add Cycle'}" @closed=${this.closeCycleDialog}>
+            <ha-dialog open header-title="${this.editingCycle ? 'Modify Cycle' : 'Add Cycle'}" @closed=${this.closeCycleDialog}>
                 <div>
                     <ha-textfield
                         label="Cycle Name"
@@ -217,9 +217,10 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
 
                     <ha-button @click=${this.addStep}>Add Step</ha-button>
                 </div>
-
+                <ha-dialog-footer slot="footer">
                 <ha-button slot="primaryAction" dialogAction="save" @click=${this.saveCycle}>Save</ha-button>
                 <ha-button slot="secondaryAction" dialogAction="cancel" @click=${this.closeCycleDialog}>Cancel</ha-button>
+                </ha-dialog-footer>
             </ha-dialog>
         `;
     }
