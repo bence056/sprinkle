@@ -123,7 +123,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
     private renderZoneDialog() {
         if (!this.zoneDialogOpen) return null;
         return html`
-            <ha-dialog open .heading="${this.editingZone ? 'Modify Zone' : 'Add Zone'}" @closed=${this.closeZoneDialog}>
+            <ha-dialog open header-title="${this.editingZone ? 'Modify Zone' : 'Add Zone'}" @closed=${this.closeZoneDialog}>
                 <div>
                     <ha-textfield
                             label="Zone Name"
@@ -147,10 +147,12 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
                         `)}
                     </div>
                 </div>
+                <ha-dialog-footer slot="footer">
                 <ha-button slot="primaryAction" dialogAction="save"
                            @click=${this.saveZone}
                            .disabled=${this.zoneNameInput == "" || this.selectedValves.size <= 0}>Save</ha-button>
                 <ha-button slot="secondaryAction" dialogAction="cancel" @click=${this.closeZoneDialog}>Cancel</ha-button>
+                </ha-dialog-footer>
             </ha-dialog>
         `;
     }
