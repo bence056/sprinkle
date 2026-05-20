@@ -123,7 +123,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
     private renderZoneDialog() {
         if (!this.zoneDialogOpen) return null;
         return html`
-            <ha-dialog open .heading="${this.editingZone ? 'Modify Zone' : 'Add Zone'}" @closed=${this.closeZoneDialog}>
+            <ha-dialog open header-title="${this.editingZone ? 'Modify Zone' : 'Add Zone'}" @closed=${this.closeZoneDialog}>
                 <div>
                     <ha-textfield
                             label="Zone Name"
@@ -132,7 +132,10 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
                             ?disabled=${this.zoneDialogModifyOnly}
                     ></ha-textfield>
                     <div class="valve-checkboxes">
-                        ${getValveEntities(this.hass).map(id => html`
+                        ${getValveEntities(this.hass)
+                                .sort((a,b) => 
+                                getValveName(this.hass, a).localeCompare(getValveName(this.hass, b)))
+                                .map(id => html`
                             <label class="valve-select-row">
                                 <ha-checkbox
                                         .checked=${this.selectedValves.has(id)}
@@ -144,8 +147,12 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
                         `)}
                     </div>
                 </div>
-                <ha-button slot="primaryAction" dialogAction="save" @click=${this.saveZone}>Save</ha-button>
+                <ha-dialog-footer slot="footer">
+                <ha-button slot="primaryAction" dialogAction="save"
+                           @click=${this.saveZone}
+                           .disabled=${this.zoneNameInput == "" || this.selectedValves.size <= 0}>Save</ha-button>
                 <ha-button slot="secondaryAction" dialogAction="cancel" @click=${this.closeZoneDialog}>Cancel</ha-button>
+                </ha-dialog-footer>
             </ha-dialog>
         `;
     }
