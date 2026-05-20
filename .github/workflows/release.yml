@@ -35,6 +35,8 @@ jobs:
           cp -r ./* .github/build/sprinkle/
 
           rm -rf .github/build/sprinkle/frontend/*
+          
+          mkdir -p .github/build/sprinkle/frontend/dist
 
           cp ./frontend/dist/sprinkle-panel.js .github/build/sprinkle/frontend/dist/
 
