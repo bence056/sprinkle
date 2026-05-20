@@ -29,7 +29,8 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
         this.cycles = await getCycles(this.hass);
         console.log(this.cycles);
         const zones = await getZones(this.hass);
-        this.availableZones = zones.map(z => ({ id: z.zone_id, name: z.zone_name }));
+        this.availableZones = zones.sort((a,b)=>a.zone_name.localeCompare(b.zone_name))
+            .map(z => ({ id: z.zone_id, name: z.zone_name }));
         this.requestUpdate();
     }
 
@@ -217,9 +218,12 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
 
                     <ha-button @click=${this.addStep}>Add Step</ha-button>
                 </div>
-
-                <ha-button slot="primaryAction" dialogAction="save" @click=${this.saveCycle}>Save</ha-button>
+                <ha-dialog-footer slot="footer">
+                <ha-button slot="primaryAction" dialogAction="save"
+                           @click=${this.saveCycle}
+                           .disabled=${this.cycleNameInput == "" || this.currentSteps.length <= 0}>Save</ha-button>
                 <ha-button slot="secondaryAction" dialogAction="cancel" @click=${this.closeCycleDialog}>Cancel</ha-button>
+                </ha-dialog-footer>
             </ha-dialog>
         `;
     }
