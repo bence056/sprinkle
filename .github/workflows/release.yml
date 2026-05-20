@@ -18,22 +18,22 @@ jobs:
           node_version: 20
 
       - name: Install frontend dependencies
-        working-directory: sprinkle/frontend
+        working-directory: ./frontend
         run: npm ci
-        
+
       - name: Build frontend
-        working-directory: sprinkle/frontend
+        working-directory: ./frontend
         run: npm run build
 
       - name: Create build folder
         run: |
           mkdir -p .github/build/sprinkle
 
-          cp -r sprinkle .github/build
+          cp -r ./* .github/build/sprinkle/
 
           rm -rf .github/build/sprinkle/frontend/*
 
-          cp sprinkle/frontend/dist/sprinkle-panel.js .github/build/sprinkle/frontend
+          cp ./frontend/dist/sprinkle-panel.js .github/build/sprinkle/frontend/
 
       - name: Create Release
         run: |
@@ -49,9 +49,3 @@ jobs:
         with:
           files: ./sprinkle-version.zip
           draft: true
-
-          
-
-          
-        
-
