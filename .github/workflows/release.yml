@@ -36,7 +36,7 @@ jobs:
 
           rm -rf .github/build/sprinkle/frontend/*
 
-          cp ./frontend/dist/sprinkle-panel.js .github/build/sprinkle/frontend/
+          cp ./frontend/dist/sprinkle-panel.js .github/build/sprinkle/frontend/dist/
 
       - name: Create Release
         run: |
