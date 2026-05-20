@@ -5,6 +5,9 @@ on:
     tags: 
       - "v*"
 
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -43,9 +46,11 @@ jobs:
       - name: Package project for release
         run: |
           cd release/
-          zip -r ./sprinkle-version.zip .
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          ZIP_NAME=${TAG_NAME#v}
+          zip -r ./sprinkle-${ZIP_NAME}.zip .
 
       - uses: softprops/action-gh-release@v3.0.0
         with:
-          files: ./sprinkle-version.zip
+          files: ./release/sprinkle-*.zip
           draft: true
