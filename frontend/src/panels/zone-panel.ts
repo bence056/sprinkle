@@ -125,12 +125,12 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
         return html`
             <ha-dialog open header-title="${this.editingZone ? 'Modify Zone' : 'Add Zone'}" @closed=${this.closeZoneDialog}>
                 <div>
-                    <ha-textfield
+                    <ha-input
                             label="Zone Name"
                             .value=${this.zoneNameInput}
                             @input=${(e: Event) => this.zoneNameInput = (e.target as HTMLInputElement).value}
                             ?disabled=${this.zoneDialogModifyOnly}
-                    ></ha-textfield>
+                    ></ha-input>
                     <div class="valve-checkboxes">
                         ${getValveEntities(this.hass)
                                 .sort((a,b) => 
