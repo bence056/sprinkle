@@ -90,6 +90,8 @@ class SprinkleZoneCoordinator:
             self.zone_status_entity.set_status(const.ZONE_RUNNING_MANUAL)
             self.zone_running = True
             run_time = self.zone_run_timer_entity.native_value
+            #open the master valve for the zone in manual mode
+            await self.coordinator.open_master_valve()
             await self.async_start_run(run_time)
 
     async def async_start_run_from_cycle(self, cycle_coordinator, minutes):
@@ -134,6 +136,9 @@ class SprinkleZoneCoordinator:
             #notify the cycle that the zone finished its run.
             await self.controlling_cycle.async_advance_cycle_zone()
             self.controlling_cycle = None
+        else:
+            #We need to turn off the master valve manually.
+            await self.coordinator.close_master_valve()
         self.coordinator.active_zone = None
 
     async def async_zone_timer_end_callback(self, now: datetime):
@@ -207,6 +212,8 @@ class SprinkleCycleCoordinator:
                 total_minutes += cycle_step.zone_minutes
             self.cycle_end_timestamp_entity.set_finish_timestamp(dt.now() + timedelta(minutes=total_minutes))
             self.cycle_status_entity.set_status(CYCLE_RUNNING)
+            #Open the master valve.
+            await self.coordinator.open_master_valve()
             await self.async_advance_cycle_zone()
 
 
@@ -236,6 +243,8 @@ class SprinkleCycleCoordinator:
         self.current_step_index = -1
         self.coordinator.active_cycle = None
         self.cycle_end_timestamp_entity.set_finish_timestamp(None)
+        # manually close the master valve at end of cycle.
+        await self.coordinator.close_master_valve()
         self.cycle_status_entity.set_status(CYCLE_IDLE)
 
     def update_cycle_steps(self, cycle_steps: list[SprinkleCycleStep]):
@@ -305,6 +314,26 @@ class SprinkleCoordinator(DataUpdateCoordinator):
 
         #handle rain delay configuration upon starting.
         await self.async_process_rain_delay()
+
+    async def open_master_valve(self):
+        if(self.store.settings.use_master_valve):
+            valve = self.store.settings.master_valve_entity_id
+            await self.hass.services.async_call(
+                "valve",  # domain
+                "open_valve",  # service
+                {"entity_id": valve},  # service data
+                blocking=True
+            )
+
+    async def close_master_valve(self):
+        if (self.store.settings.use_master_valve):
+            valve = self.store.settings.master_valve_entity_id
+            await self.hass.services.async_call(
+                "valve",  # domain
+                "close_valve",  # service
+                {"entity_id": valve},  # service data
+                blocking=True
+            )
 
     async def async_rain_delay_setter_pressed(self):
 
