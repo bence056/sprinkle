@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import timedelta, datetime
 
@@ -105,6 +106,8 @@ class SprinkleZoneCoordinator:
     async def async_start_run(self, minutes):
         if self.zone_status_entity.native_value == const.ZONE_IDLE:
             return
+        #delay here for the valve delay time
+        await self.coordinator.delay_valve_opening()
         end_time = dt.now() + timedelta(minutes=minutes)
         if self.timer_callback_obj:
             self.timer_callback_obj()
@@ -334,6 +337,11 @@ class SprinkleCoordinator(DataUpdateCoordinator):
                 {"entity_id": valve},  # service data
                 blocking=True
             )
+
+    async def delay_valve_opening(self):
+        if(self.store.settings.valve_toggle_delay_ms >= 100):
+            #wait for x ms
+            await asyncio.sleep(self.store.settings.valve_toggle_delay_ms / 1000)
 
     async def async_rain_delay_setter_pressed(self):
 
