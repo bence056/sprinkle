@@ -13,6 +13,7 @@ import voluptuous as vol
 import logging
 from aiohttp.web import Request
 import attr
+from .store import SprinkleStorage
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -73,6 +74,16 @@ async def sprinkle_get_cycles(hass: HomeAssistant, connection: websocket_api.Act
     response = [attr.asdict(c) for c in coordinator.store.cycles.values()]
     connection.send_result(msg["id"],  response)
 
+@websocket_command(
+{
+    vol.Required("type"): "sprinkle/get_gs",
+})
+@async_response
+async def sprinkle_get_gs(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    store: SprinkleStorage = hass.data[const.DOMAIN]["coordinator"].store;
+    response = attr.asdict(store.settings)
+    connection.send_result(msg["id"],  response)
+
 
 class SprinkleZonesView(HomeAssistantView):
 
@@ -124,10 +135,42 @@ class SprinkleCyclesView(HomeAssistantView):
 
         await coordinator.async_update_cycle_config(data[const.ATTR_CYCLE_ID], data)
 
+
+class SprinkleGeneralSettingsView(HomeAssistantView):
+
+    url = "/api/sprinkle/generalSettings"
+    name = "api:sprinkle:general_settings"
+
+    @RequestDataValidator(
+        vol.Schema(
+            {
+
+                vol.Required(const.ATTR_SETTINGS_USE_MASTER_VALVE): cv.boolean,
+                vol.Required(const.ATTR_SETTINGS_MASTER_VALVE_ID): vol.Any(
+                    cv.entity_id,
+                    ""
+                ),
+                vol.Required(const.ATTR_SETTINGS_VALVE_TOGGLE_DELAY_MS): cv.positive_int,
+
+            }
+        )
+    )
+
+    async def post(self, request: Request, data):
+        hass: HomeAssistant = request.app["hass"]
+        coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
+
+        await coordinator.async_update_general_settings(data)
+
+
+
+
 def register_websockets(hass: HomeAssistant):
     async_register_command(hass, handle_subscribe_updates)
     async_register_command(hass, sprinkle_log)
     async_register_command(hass, sprinkle_get_zones)
     async_register_command(hass, sprinkle_get_cycles)
+    async_register_command(hass, sprinkle_get_gs)
     hass.http.register_view(SprinkleZonesView)
     hass.http.register_view(SprinkleCyclesView)
+    hass.http.register_view(SprinkleGeneralSettingsView)

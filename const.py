@@ -45,3 +45,7 @@ ATTR_CYCLE_ID = "cycle_id"
 ATTR_CYCLE_NAME = "cycle_name"
 ATTR_CYCLE_STEPS = "cycle_steps"
 ATTR_CYCLE_DELETE = "cycle_delete"
+
+ATTR_SETTINGS_USE_MASTER_VALVE = "use_master_valve"
+ATTR_SETTINGS_MASTER_VALVE_ID = "master_valve_entity_id"
+ATTR_SETTINGS_VALVE_TOGGLE_DELAY_MS = "valve_toggle_delay_ms"

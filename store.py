@@ -36,6 +36,13 @@ class SprinkleCycle:
     cycle_steps = attr.field(type=List[SprinkleCycleStep], default=[])
 
 
+@attr.s(slots=True, frozen=False)
+class SprinkleGeneralSettings:
+
+    use_master_valve = attr.field(type=bool, default=False)
+    master_valve_entity_id = attr.field(type=str, default="")
+    valve_toggle_delay_ms = attr.field(type=int, default=0)
+
 
 class SprinkleStorage:
     """Storage Object for the integration"""
@@ -44,6 +51,7 @@ class SprinkleStorage:
         self.hass = hass
         self._store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
         self.config = SprinkleConfig()
+        self.settings = SprinkleGeneralSettings()
         self.zones: MutableMapping[str, SprinkleZone] = {}
         self.cycles: MutableMapping[str, SprinkleCycle] = {}
         self.save_key: int = -1
@@ -54,6 +62,8 @@ class SprinkleStorage:
         zones: MutableMapping[str, SprinkleZone] = {}
         cycles: MutableMapping[str, SprinkleCycle] = {}
         config: SprinkleConfig = SprinkleConfig()
+        settings: SprinkleGeneralSettings = SprinkleGeneralSettings()
+
         save_key = -1
 
         data = await self._store.async_load()
@@ -63,6 +73,9 @@ class SprinkleStorage:
 
             if "config" in data:
                 config = SprinkleConfig(**data["config"])
+
+            if "settings" in data:
+                settings = SprinkleGeneralSettings(**data["settings"])
 
             if "zones" in data:
                 for zone in data["zones"]:
@@ -87,6 +100,7 @@ class SprinkleStorage:
             self.cycles = cycles
             self.save_key = save_key
             self.config = config
+            self.settings = settings
 
         else:
             await self.async_factory_default()
@@ -94,6 +108,7 @@ class SprinkleStorage:
     async def async_factory_default(self):
         self.save_key = 1
         self.config = SprinkleConfig()
+        self.settings = SprinkleGeneralSettings()
 
     async def async_save(self):
         await self._store.async_save(self.parse_save_data())
@@ -107,6 +122,7 @@ class SprinkleStorage:
         self.save_key += 1
         store_data = {"save_key": self.save_key,
                       "config": attr.asdict(self.config),
+                      "settings": attr.asdict(self.settings),
                       "zones": [
             attr.asdict(zoneRaw) for zoneRaw in self.zones.values()
         ],

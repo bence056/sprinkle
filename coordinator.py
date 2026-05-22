@@ -365,6 +365,16 @@ class SprinkleCoordinator(DataUpdateCoordinator):
                 return device.id
         return None
 
+    async def async_update_general_settings(self, data: dict):
+        await self.async_stop_all_cycles_and_zones()
+        self.store.settings.use_master_valve = data[const.ATTR_SETTINGS_USE_MASTER_VALVE];
+        self.store.settings.master_valve_entity_id = data[const.ATTR_SETTINGS_MASTER_VALVE_ID]
+        if(self.store.settings.use_master_valve == False):
+            self.store.settings.master_valve_entity_id = ""
+        self.store.settings.valve_toggle_delay_ms = data[const.ATTR_SETTINGS_VALVE_TOGGLE_DELAY_MS]
+        self.store.async_queue_save();
+        homeassistant.helpers.dispatcher.async_dispatcher_send(self.hass, "sprinkle_update_dispatch")
+
 
     async def async_update_zone_config(self, zone_id: str, data: dict):
 

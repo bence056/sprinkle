@@ -29,7 +29,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
 
     private onSettingsChanged() {
         //set id to empty string if the general settings
-        if(!this.settingsObject.useMasterValve) this.settingsObject.masterValveEntityId = "";
+        if(!this.settingsObject.use_master_valve) this.settingsObject.master_valve_entity_id = "";
 
         //send the api call.
         updateGeneralSettings(this.hass, this.settingsObject).then(() => console.log("General settings updated."))
@@ -58,13 +58,13 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
                 <ha-card header="General Settings">
                 <ha-expansion-panel expanded=true header="Master Valve">
                     <div class="horizontal-split">
-                        <ha-switch .checked=${this.settingsObject?.useMasterValve || false} @change="${(e: Event) => {
-                            this.settingsObject.useMasterValve = (e.target as any).checked;
+                        <ha-switch .checked=${this.settingsObject?.use_master_valve || false} @change="${(e: Event) => {
+                            this.settingsObject.use_master_valve = (e.target as any).checked;
                             this.onSettingsChanged();
                         }}" style="grid-area: switch; justify-content: space-around"></ha-switch>
                         <p style="grid-area: label; font-size: 18px; margin-right: 20px">Use master valve</p>
-                        <ha-select .value=${this.settingsObject?.masterValveEntityId || ""}
-                                   .disabled = ${this.settingsObject?.useMasterValve == false || true}
+                        <ha-select .value=${this.settingsObject?.master_valve_entity_id || ""}
+                                   .disabled = ${this.settingsObject?.use_master_valve == false}
                                    .options=${getValveEntities(this.hass)
                                 .sort((a,b) => 
                                 getValveName(this.hass, a).localeCompare(getValveName(this.hass, b))).map((e) => (
@@ -74,7 +74,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
                                                    }
                                            ))}
                                    @selected=${(e: CustomEvent) => {
-                                            this.settingsObject.masterValveEntityId = e.detail.value;
+                                            this.settingsObject.master_valve_entity_id = e.detail.value;
                                             this.onSettingsChanged();}}
                                     @closed=${(e: CustomEvent) => e.stopPropagation()}
                                    style="grid-area: dropdown"></ha-select>
