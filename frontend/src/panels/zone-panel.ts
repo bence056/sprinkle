@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { HomeAssistant, Zone } from '../types';
-import {getValveName, getValveEntities, getValveIcon} from "../helpers";
+import {getValveName, getValveEntities, getValveIcon, createSimpleUUID} from "../helpers";
 import {commonStyle} from "../style";
 import {SubscribeMixin} from "../subscribe-mixin";
 import {UnsubscribeFunc} from "home-assistant-js-websocket";
@@ -103,7 +103,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
             });
         }else {
             const newZone: Zone = {
-            zone_id: this.editingZone?.zone_id || crypto.randomUUID(),
+            zone_id: this.editingZone?.zone_id || `zone-${createSimpleUUID()}`,
             zone_name: name,
             zone_valves: Array.from(this.selectedValves),
         };

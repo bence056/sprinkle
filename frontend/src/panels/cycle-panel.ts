@@ -5,7 +5,7 @@ import { commonStyle } from "../style";
 import { SubscribeMixin } from "../subscribe-mixin";
 import { UnsubscribeFunc } from "home-assistant-js-websocket";
 import { getCycles, getZones, createCycle, modifyCycle, deleteCycle } from "../websockets";
-import { getValveName } from "../helpers";
+import { getValveName, createSimpleUUID } from "../helpers";
 
 @customElement('cycle-panel')
 export class CyclePanel extends SubscribeMixin(LitElement) {
@@ -143,7 +143,7 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
         if (!name || this.currentSteps.length === 0) return;
 
         const newCycle: Cycle = {
-            cycle_id: this.editingCycle?.cycle_id || crypto.randomUUID(),
+            cycle_id: this.editingCycle?.cycle_id || `cycle-${createSimpleUUID()}`,
             cycle_name: this.editingCycle?.cycle_name || name,
             cycle_steps: this.currentSteps,
         };
