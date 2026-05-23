@@ -79,3 +79,9 @@ export interface CycleStep {
     zone_id: string;
     zone_minutes: number;
 }
+
+export interface GeneralSettings {
+    use_master_valve: boolean;
+    master_valve_entity_id: string;
+    valve_toggle_delay_ms: number;
+}

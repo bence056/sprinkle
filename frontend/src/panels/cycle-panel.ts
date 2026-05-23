@@ -5,7 +5,7 @@ import { commonStyle } from "../style";
 import { SubscribeMixin } from "../subscribe-mixin";
 import { UnsubscribeFunc } from "home-assistant-js-websocket";
 import { getCycles, getZones, createCycle, modifyCycle, deleteCycle } from "../websockets";
-import { getValveName } from "../helpers";
+import { getValveName, createSimpleUUID } from "../helpers";
 
 @customElement('cycle-panel')
 export class CyclePanel extends SubscribeMixin(LitElement) {
@@ -143,7 +143,7 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
         if (!name || this.currentSteps.length === 0) return;
 
         const newCycle: Cycle = {
-            cycle_id: this.editingCycle?.cycle_id || crypto.randomUUID(),
+            cycle_id: this.editingCycle?.cycle_id || `cycle-${createSimpleUUID()}`,
             cycle_name: this.editingCycle?.cycle_name || name,
             cycle_steps: this.currentSteps,
         };
@@ -169,12 +169,12 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
         return html`
             <ha-dialog open .heading="${this.editingCycle ? 'Modify Cycle' : 'Add Cycle'}" @closed=${this.closeCycleDialog}>
                 <div>
-                    <ha-textfield
+                    <ha-input
                         label="Cycle Name"
                         .value=${this.cycleNameInput}
                         @input=${(e: Event) => this.cycleNameInput = (e.target as HTMLInputElement).value}
                         ?disabled=${this.cycleDialogModifyOnly}
-                    ></ha-textfield>
+                    ></ha-input>
 
                     <div class="draggable-list">
                         ${this.currentSteps.map((step, index) => html`
@@ -186,20 +186,23 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
                                 ><ha-icon icon="mdi:close"></ha-icon></ha-icon-button>
                                 <ha-select
                                     .value=${step.zone_id}
-                                    @selected=${(e: Event) => 
-                                            this.updateStepZone(index, (e.target as HTMLSelectElement).value)}
+                                    .options=${this.availableZones.map(((z)=> (
+                                        {
+                                            value: z.id,
+                                            label: z.name
+                                        }
+                                    )))}
+                                    @selected=${(e: CustomEvent) => 
+                                            this.updateStepZone(index, e.detail.value)}
                                     @closed=${(e: CustomEvent) => e.stopPropagation()}>
-                                    ${this.availableZones.map(z => html`
-                                        <mwc-list-item .value=${z.id}>${z.name}</mwc-list-item>
-                                    `)}
                                 </ha-select>
-                                <ha-textfield
+                                <ha-input
                                     label="Minutes"
                                     type="number"
                                     min="1"
                                     .value=${step.zone_minutes.toString()}
                                     @input=${(e: Event) => this.updateStepMinutes(index, parseInt((e.target as HTMLInputElement).value))}
-                                ></ha-textfield>
+                                ></ha-input>
                                 <div class="move-buttons">
                                     <ha-icon-button
                                         title="Move Up"    

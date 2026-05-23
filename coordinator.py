@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import timedelta, datetime
 
@@ -90,6 +91,8 @@ class SprinkleZoneCoordinator:
             self.zone_status_entity.set_status(const.ZONE_RUNNING_MANUAL)
             self.zone_running = True
             run_time = self.zone_run_timer_entity.native_value
+            #open the master valve for the zone in manual mode
+            await self.coordinator.open_master_valve()
             await self.async_start_run(run_time)
 
     async def async_start_run_from_cycle(self, cycle_coordinator, minutes):
@@ -103,6 +106,8 @@ class SprinkleZoneCoordinator:
     async def async_start_run(self, minutes):
         if self.zone_status_entity.native_value == const.ZONE_IDLE:
             return
+        #delay here for the valve delay time
+        await self.coordinator.delay_valve_opening()
         end_time = dt.now() + timedelta(minutes=minutes)
         if self.timer_callback_obj:
             self.timer_callback_obj()
@@ -134,6 +139,9 @@ class SprinkleZoneCoordinator:
             #notify the cycle that the zone finished its run.
             await self.controlling_cycle.async_advance_cycle_zone()
             self.controlling_cycle = None
+        else:
+            #We need to turn off the master valve manually.
+            await self.coordinator.close_master_valve()
         self.coordinator.active_zone = None
 
     async def async_zone_timer_end_callback(self, now: datetime):
@@ -207,6 +215,8 @@ class SprinkleCycleCoordinator:
                 total_minutes += cycle_step.zone_minutes
             self.cycle_end_timestamp_entity.set_finish_timestamp(dt.now() + timedelta(minutes=total_minutes))
             self.cycle_status_entity.set_status(CYCLE_RUNNING)
+            #Open the master valve.
+            await self.coordinator.open_master_valve()
             await self.async_advance_cycle_zone()
 
 
@@ -228,6 +238,8 @@ class SprinkleCycleCoordinator:
         #first check if the index of the cycle step is still within bounds.
         # if it is, it means that the cycle was interrupted, so we need to manually stop the currently active zone.
         # if it isn't, it means that the last zone has ended its cycle, no need to manually stop it.
+        if not self.is_running:
+            return
         if self.current_step_index < len(self.assigned_zones):
             if self.assigned_zones[self.current_step_index].is_running:
                 #forcefully set the cycle to none, so the zone won't call back to go to the next step.
@@ -236,6 +248,8 @@ class SprinkleCycleCoordinator:
         self.current_step_index = -1
         self.coordinator.active_cycle = None
         self.cycle_end_timestamp_entity.set_finish_timestamp(None)
+        # manually close the master valve at end of cycle.
+        await self.coordinator.close_master_valve()
         self.cycle_status_entity.set_status(CYCLE_IDLE)
 
     def update_cycle_steps(self, cycle_steps: list[SprinkleCycleStep]):
@@ -306,6 +320,31 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         #handle rain delay configuration upon starting.
         await self.async_process_rain_delay()
 
+    async def open_master_valve(self):
+        if(self.store.settings.use_master_valve):
+            valve = self.store.settings.master_valve_entity_id
+            await self.hass.services.async_call(
+                "valve",  # domain
+                "open_valve",  # service
+                {"entity_id": valve},  # service data
+                blocking=True
+            )
+
+    async def close_master_valve(self):
+        if (self.store.settings.use_master_valve):
+            valve = self.store.settings.master_valve_entity_id
+            await self.hass.services.async_call(
+                "valve",  # domain
+                "close_valve",  # service
+                {"entity_id": valve},  # service data
+                blocking=True
+            )
+
+    async def delay_valve_opening(self):
+        if(self.store.settings.valve_toggle_delay_ms >= 100):
+            #wait for x ms
+            await asyncio.sleep(self.store.settings.valve_toggle_delay_ms / 1000)
+
     async def async_rain_delay_setter_pressed(self):
 
         hours = self.rain_delay_number_entity.native_value
@@ -365,6 +404,16 @@ class SprinkleCoordinator(DataUpdateCoordinator):
                 return device.id
         return None
 
+    async def async_update_general_settings(self, data: dict):
+        await self.async_stop_all_cycles_and_zones()
+        self.store.settings.use_master_valve = data[const.ATTR_SETTINGS_USE_MASTER_VALVE];
+        self.store.settings.master_valve_entity_id = data[const.ATTR_SETTINGS_MASTER_VALVE_ID]
+        if(self.store.settings.use_master_valve == False):
+            self.store.settings.master_valve_entity_id = ""
+        self.store.settings.valve_toggle_delay_ms = data[const.ATTR_SETTINGS_VALVE_TOGGLE_DELAY_MS]
+        self.store.async_queue_save();
+        homeassistant.helpers.dispatcher.async_dispatcher_send(self.hass, "sprinkle_update_dispatch")
+
 
     async def async_update_zone_config(self, zone_id: str, data: dict):
 
@@ -414,7 +463,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         zone_toggle.zone_valves = data[const.ATTR_ZONE_VALVES]
         #Edit it in the serializable data as well.
         zone_serializable: SprinkleZone = self.store.zones[zone_id]
-        zone_serializable.zone_valves = data[const.ATTR_ZONE_VALVES]
+        zone_serializable.zone_valves = filter(lambda z: z != self.store.settings.master_valve_entity_id, data[const.ATTR_ZONE_VALVES])
         self.store.async_queue_save()
 
     async def async_create_zone(self, zone_id: str, data: dict):
@@ -523,6 +572,8 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         for zone in self.zones.values():
             if zone.is_running:
                 await zone.async_stop_run()
+        #just in case close the master valve as well.
+        await self.close_master_valve()
         _LOGGER.info("All zones and cycles have been stopped.")
 
     async def async_stop_active_cycle(self):

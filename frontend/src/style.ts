@@ -6,6 +6,10 @@ export const commonStyle = css`
       margin: 16px;
       padding: 16px;
     }
+    ha-expansion-panel {
+      margin: 16px;
+      padding: 16px;
+    }
     .section {
       margin-bottom: 32px;
     }

@@ -62,11 +62,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     return True
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     #stop all zones and cycles.
+    await async_unregister_panel(hass)
     coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
     await coordinator.async_stop_all_cycles_and_zones()
     await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return True
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Integration removal cleanup"""

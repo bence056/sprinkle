@@ -4,6 +4,7 @@ import { HomeAssistant, Cycle, Schedule } from './types';
 import {commonStyle} from "./style";
 import "./panels/zone-panel"
 import "./panels/cycle-panel"
+import "./panels/general-panel"
 
 @customElement('sprinkle-panel')
 export class SprinklePanel extends LitElement {
@@ -13,6 +14,7 @@ export class SprinklePanel extends LitElement {
 
   render() {
     return html`
+        <general-panel .hass="${this.hass}"></general-panel>
         <zone-panel .hass="${this.hass}"></zone-panel>
         <cycle-panel .hass="${this.hass}"></cycle-panel>
     `

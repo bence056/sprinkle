@@ -1,11 +1,11 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { HomeAssistant, Zone } from '../types';
-import {getValveName, getValveEntities, getValveIcon} from "../helpers";
+import {getValveName, getValveEntities, getValveIcon, createSimpleUUID} from "../helpers";
 import {commonStyle} from "../style";
 import {SubscribeMixin} from "../subscribe-mixin";
 import {UnsubscribeFunc} from "home-assistant-js-websocket";
-import {createZone, deleteZone as apiDeleteZone, getZones, modifyZoneValves} from '../websockets'
+import {createZone, deleteZone as apiDeleteZone, getGeneralSettings, getZones, modifyZoneValves} from '../websockets'
 
 @customElement('zone-panel')
 export class ZonePanel extends SubscribeMixin(LitElement) {
@@ -13,6 +13,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
     hass!: HomeAssistant;
 
     @state() private zones: Zone[] = [];
+    @state() private master_valve: string = ""
     @state() private editingZone: Zone | null = null;
     @state() private selectedValves: Set<string> = new Set();
     @state() private zoneDialogOpen: boolean = false;
@@ -28,6 +29,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
         if(!this.hass) return;
 
            this.zones = await getZones(this.hass);
+           this.master_valve = (await getGeneralSettings(this.hass)).master_valve_entity_id;
            this.requestUpdate();
 
     }
@@ -101,7 +103,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
             });
         }else {
             const newZone: Zone = {
-            zone_id: this.editingZone?.zone_id || crypto.randomUUID(),
+            zone_id: this.editingZone?.zone_id || `zone-${createSimpleUUID()}`,
             zone_name: name,
             zone_valves: Array.from(this.selectedValves),
         };
@@ -125,14 +127,14 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
         return html`
             <ha-dialog open header-title="${this.editingZone ? 'Modify Zone' : 'Add Zone'}" @closed=${this.closeZoneDialog}>
                 <div>
-                    <ha-textfield
+                    <ha-input
                             label="Zone Name"
                             .value=${this.zoneNameInput}
                             @input=${(e: Event) => this.zoneNameInput = (e.target as HTMLInputElement).value}
                             ?disabled=${this.zoneDialogModifyOnly}
-                    ></ha-textfield>
+                    ></ha-input>
                     <div class="valve-checkboxes">
-                        ${getValveEntities(this.hass)
+                        ${getValveEntities(this.hass).filter((a) => a != this.master_valve)
                                 .sort((a,b) => 
                                 getValveName(this.hass, a).localeCompare(getValveName(this.hass, b)))
                                 .map(id => html`

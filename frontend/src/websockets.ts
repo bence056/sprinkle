@@ -1,4 +1,5 @@
-import {Cycle, HomeAssistant, Zone} from "./types";
+import {Cycle, GeneralSettings, HomeAssistant, Zone} from "./types";
+import {Part} from "lit";
 
 export const createZone = (hass: HomeAssistant, zone: Partial<Zone>) : Promise<boolean> => {
     return hass.callApi('POST', 'sprinkle/zones', zone)
@@ -43,4 +44,15 @@ export const getCycles = (hass: HomeAssistant) : Promise<Cycle[]> => {
     return hass.callWS({
         type: "sprinkle/get_cycles"
     })
+}
+
+export const getGeneralSettings = (hass: HomeAssistant) : Promise<GeneralSettings> => {
+    return hass.callWS({
+        type: "sprinkle/get_gs"
+    })
+}
+
+
+export const apiUpdateGeneralSettings = (hass: HomeAssistant, settingsObject: Partial<GeneralSettings>) : Promise<boolean> => {
+    return hass.callApi('POST', 'sprinkle/generalSettings', settingsObject);
 }
