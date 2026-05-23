@@ -1,20 +1,21 @@
-import { LitElement, html, css } from 'lit';
+import {LitElement, html, css, Part} from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import {GeneralSettings, HomeAssistant, Zone} from '../types';
 import {commonStyle} from "../style";
 import {SubscribeMixin} from "../subscribe-mixin";
 import {UnsubscribeFunc} from "home-assistant-js-websocket";
-import {getGeneralSettings, updateGeneralSettings} from "../websockets";
+import {getGeneralSettings, apiUpdateGeneralSettings} from "../websockets";
 import {getValveEntities, getValveName} from "../helpers";
 
 @customElement('general-panel')
 export class ZonePanel extends SubscribeMixin(LitElement) {
 
     hass!: HomeAssistant;
-    settingsObject!: GeneralSettings;
+    private settingsObject!: GeneralSettings;
     @state()
-    modifiedValveDelay!: number;
-
+    private modifiedSettingsObject!: GeneralSettings;
+    @state()
+    private settingsSaveNeeded: boolean = false;
 
     protected hassSubscribe(): Array<UnsubscribeFunc | Promise<UnsubscribeFunc>> {
         this.fetchData();
@@ -25,17 +26,26 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
         if(!this.hass) return;
 
            this.settingsObject = await getGeneralSettings(this.hass);
-           this.modifiedValveDelay = this.settingsObject.valve_toggle_delay_ms;
+           this.modifiedSettingsObject = this.settingsObject;
            this.requestUpdate();
 
     }
 
-    private onSettingsChanged() {
+    private updateGeneralSettings(partialSettings: Partial<GeneralSettings>) {
+        this.modifiedSettingsObject = {...this.modifiedSettingsObject, ...partialSettings}
+        if(!this.modifiedSettingsObject.use_master_valve) this.modifiedSettingsObject.master_valve_entity_id = "";
+        this.settingsSaveNeeded = true;
+    }
+
+    private onSettingsSaveRequested() {
         //set id to empty string if the general settings
-        if(!this.settingsObject.use_master_valve) this.settingsObject.master_valve_entity_id = "";
 
         //send the api call.
-        updateGeneralSettings(this.hass, this.settingsObject).then(() => console.log("General settings updated."))
+        apiUpdateGeneralSettings(this.hass, this.modifiedSettingsObject).then(() => {
+            console.log("General settings updated.");
+            this.settingsSaveNeeded = false;
+            }
+        );
     }
 
     static styles = [
@@ -74,12 +84,13 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
                 <ha-expansion-panel expanded=true header="Valves">
                     <div class="master-valve-config">
                         <ha-switch .checked=${this.settingsObject?.use_master_valve || false} @change="${(e: Event) => {
-                            this.settingsObject.use_master_valve = (e.target as any).checked;
-                            this.onSettingsChanged();
+                            this.updateGeneralSettings({
+                                use_master_valve: (e.target as any).checked
+                            });
                         }}" style="grid-area: switch; justify-content: space-around"></ha-switch>
                         <p style="grid-area: label; font-size: 18px; margin-right: 20px; display: flex; align-items: center">Use master valve</p>
-                        <ha-select .value=${this.settingsObject?.master_valve_entity_id || ""}
-                                   .disabled = ${this.settingsObject?.use_master_valve == false}
+                        <ha-select .value=${this.modifiedSettingsObject?.master_valve_entity_id || ""}
+                                   .disabled = ${this.modifiedSettingsObject?.use_master_valve == false}
                                    .options=${getValveEntities(this.hass)
                                 .sort((a,b) => 
                                 getValveName(this.hass, a).localeCompare(getValveName(this.hass, b))).map((e) => (
@@ -89,8 +100,9 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
                                                    }
                                            ))}
                                    @selected=${(e: CustomEvent) => {
-                                            this.settingsObject.master_valve_entity_id = e.detail.value;
-                                            this.onSettingsChanged();}}
+                                            this.updateGeneralSettings({
+                                                master_valve_entity_id: e.detail.value
+                                            })}}
                                     @closed=${(e: CustomEvent) => e.stopPropagation()}
                                    style="grid-area: dropdown"></ha-select>
                     </div>
@@ -98,11 +110,13 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
                         <p style="font-size: 18px; margin-right: 5px; grid-area: label; display: flex; align-items: center">Valve transition delay (ms)</p>
                         <ha-icon id="help" style="grid-area: hint; display: flex; align-items: center" icon="mdi:help-circle"></ha-icon>
                         <ha-tooltip for="help">The minimum delay that has to pass between stopping a valve and starting the next one</ha-tooltip>
-                        <ha-input .value=${this.modifiedValveDelay}
-                                  @input=${(e: Event) => this.modifiedValveDelay = Number((e.target as HTMLInputElement).value)}
-                                  label="0 ms" type="number" min="0" max="5000" step="100" style="grid-area: input"></ha-input>
-                        ${ this.settingsObject.valve_toggle_delay_ms != this.modifiedValveDelay ? 
-                                html`<ha-button style="grid-area: save" @click=${() => {this.settingsObject.valve_toggle_delay_ms = this.modifiedValveDelay; this.onSettingsChanged();} }>Save</ha-button>` : ""}
+                        <ha-input .value=${this.modifiedSettingsObject?.valve_toggle_delay_ms || 500}
+                                  @input=${(e: Event) => this.updateGeneralSettings({
+                                      valve_toggle_delay_ms: Number((e.target as HTMLInputElement).value)
+                                  })}
+                                  label="0 ms" type="number" min="500" max="5000" step="100" style="grid-area: input"></ha-input>
+                        ${ this.settingsSaveNeeded ? 
+                                html`<ha-button style="grid-area: save" @click=${() => {this.onSettingsSaveRequested();} }>Save</ha-button>` : ""}
                      
                 </ha-expansion-panel>    
                 </ha-card>

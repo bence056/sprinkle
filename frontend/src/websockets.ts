@@ -53,6 +53,6 @@ export const getGeneralSettings = (hass: HomeAssistant) : Promise<GeneralSetting
 }
 
 
-export const updateGeneralSettings = (hass: HomeAssistant, settingsObject: Partial<GeneralSettings>) : Promise<boolean> => {
+export const apiUpdateGeneralSettings = (hass: HomeAssistant, settingsObject: Partial<GeneralSettings>) : Promise<boolean> => {
     return hass.callApi('POST', 'sprinkle/generalSettings', settingsObject);
 }

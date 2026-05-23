@@ -41,7 +41,7 @@ class SprinkleGeneralSettings:
 
     use_master_valve = attr.field(type=bool, default=False)
     master_valve_entity_id = attr.field(type=str, default="")
-    valve_toggle_delay_ms = attr.field(type=int, default=0)
+    valve_toggle_delay_ms = attr.field(type=int, default=500)
 
 
 class SprinkleStorage:
