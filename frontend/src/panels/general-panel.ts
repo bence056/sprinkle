@@ -109,12 +109,13 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
                     <div class="valve-delay-config">
                         <p style="font-size: 18px; margin-right: 5px; grid-area: label; display: flex; align-items: center">Valve transition delay (ms)</p>
                         <ha-icon id="help" style="grid-area: hint; display: flex; align-items: center" icon="mdi:help-circle"></ha-icon>
-                        <ha-tooltip for="help">The minimum delay that has to pass between stopping a valve and starting the next one</ha-tooltip>
+                        <ha-tooltip for="help">The minimum delay that has to pass after closing a valve, before a new set of valves can be opened.
+                            <br/><br/>This is useful if you want to prevent high pressure fluctuations and backflow.</ha-tooltip>
                         <ha-input .value=${this.modifiedSettingsObject?.valve_toggle_delay_ms || 500}
                                   @input=${(e: Event) => this.updateGeneralSettings({
                                       valve_toggle_delay_ms: Number((e.target as HTMLInputElement).value)
                                   })}
-                                  label="0 ms" type="number" min="500" max="5000" step="100" style="grid-area: input"></ha-input>
+                                  label="0 ms" type="number" min="0" max="5000" step="100" style="grid-area: input"></ha-input>
                         ${ this.settingsSaveNeeded ? 
                                 html`<ha-button style="grid-area: save" @click=${() => {this.onSettingsSaveRequested();} }>Save</ha-button>` : ""}
                      
