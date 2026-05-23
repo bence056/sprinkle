@@ -4,7 +4,7 @@ import {GeneralSettings, HomeAssistant, Zone} from '../types';
 import {commonStyle} from "../style";
 import {SubscribeMixin} from "../subscribe-mixin";
 import {UnsubscribeFunc} from "home-assistant-js-websocket";
-import {getGeneralSettings, apiUpdateGeneralSettings} from "../websockets";
+import {getGeneralSettings, apiUpdateGeneralSettings, getZones} from "../websockets";
 import {getValveEntities, getValveName} from "../helpers";
 
 @customElement('general-panel')
@@ -16,6 +16,8 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
     private modifiedSettingsObject!: GeneralSettings;
     @state()
     private settingsSaveNeeded: boolean = false;
+    @state()
+    private zone_valves: Set<string> = new Set<string>
 
     protected hassSubscribe(): Array<UnsubscribeFunc | Promise<UnsubscribeFunc>> {
         this.fetchData();
@@ -27,6 +29,9 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
 
            this.settingsObject = await getGeneralSettings(this.hass);
            this.modifiedSettingsObject = this.settingsObject;
+           let zones = await getZones(this.hass);
+           this.zone_valves.clear();
+           zones.forEach((z) => z.zone_valves.forEach((v) => this.zone_valves.add(v)));
            this.requestUpdate();
 
     }
@@ -38,7 +43,8 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
     }
 
     private onSettingsSaveRequested() {
-        //set id to empty string if the general settings
+
+
 
         //send the api call.
         apiUpdateGeneralSettings(this.hass, this.modifiedSettingsObject).then(() => {
@@ -96,13 +102,17 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
                                 getValveName(this.hass, a).localeCompare(getValveName(this.hass, b))).map((e) => (
                                                    {
                                                        value: e,
-                                                       label: getValveName(this.hass, e)
+                                                       label: getValveName(this.hass, e),
+                                                       disabled: this.zone_valves.has(e),
+                                                       secondary: this.zone_valves.has(e) ? html`Valve is part of a zone.<br/>Remove from zone to enable.` : ""
                                                    }
                                            ))}
                                    @selected=${(e: CustomEvent) => {
-                                            this.updateGeneralSettings({
-                                                master_valve_entity_id: e.detail.value
-                                            })}}
+                                             this.updateGeneralSettings(
+                                                 {
+                                                     master_valve_entity_id: e.detail.value
+                                                 })
+                                   }}
                                     @closed=${(e: CustomEvent) => e.stopPropagation()}
                                    style="grid-area: dropdown"></ha-select>
                     </div>

@@ -5,7 +5,7 @@ import {getValveName, getValveEntities, getValveIcon} from "../helpers";
 import {commonStyle} from "../style";
 import {SubscribeMixin} from "../subscribe-mixin";
 import {UnsubscribeFunc} from "home-assistant-js-websocket";
-import {createZone, deleteZone as apiDeleteZone, getZones, modifyZoneValves} from '../websockets'
+import {createZone, deleteZone as apiDeleteZone, getGeneralSettings, getZones, modifyZoneValves} from '../websockets'
 
 @customElement('zone-panel')
 export class ZonePanel extends SubscribeMixin(LitElement) {
@@ -13,6 +13,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
     hass!: HomeAssistant;
 
     @state() private zones: Zone[] = [];
+    @state() private master_valve: string = ""
     @state() private editingZone: Zone | null = null;
     @state() private selectedValves: Set<string> = new Set();
     @state() private zoneDialogOpen: boolean = false;
@@ -28,6 +29,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
         if(!this.hass) return;
 
            this.zones = await getZones(this.hass);
+           this.master_valve = (await getGeneralSettings(this.hass)).master_valve_entity_id;
            this.requestUpdate();
 
     }
@@ -132,7 +134,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
                             ?disabled=${this.zoneDialogModifyOnly}
                     ></ha-input>
                     <div class="valve-checkboxes">
-                        ${getValveEntities(this.hass)
+                        ${getValveEntities(this.hass).filter((a) => a != this.master_valve)
                                 .sort((a,b) => 
                                 getValveName(this.hass, a).localeCompare(getValveName(this.hass, b)))
                                 .map(id => html`
