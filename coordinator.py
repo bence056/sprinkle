@@ -238,6 +238,8 @@ class SprinkleCycleCoordinator:
         #first check if the index of the cycle step is still within bounds.
         # if it is, it means that the cycle was interrupted, so we need to manually stop the currently active zone.
         # if it isn't, it means that the last zone has ended its cycle, no need to manually stop it.
+        if not self.is_running:
+            return
         if self.current_step_index < len(self.assigned_zones):
             if self.assigned_zones[self.current_step_index].is_running:
                 #forcefully set the cycle to none, so the zone won't call back to go to the next step.
