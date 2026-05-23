@@ -572,6 +572,8 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         for zone in self.zones.values():
             if zone.is_running:
                 await zone.async_stop_run()
+        #just in case close the master valve as well.
+        await self.close_master_valve()
         _LOGGER.info("All zones and cycles have been stopped.")
 
     async def async_stop_active_cycle(self):
