@@ -44,7 +44,9 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
 
     private onSettingsSaveRequested() {
 
-
+        if(this.modifiedSettingsObject.use_master_valve == true && this.modifiedSettingsObject.master_valve_entity_id == "") {
+            this.modifiedSettingsObject.use_master_valve = false;
+        }
 
         //send the api call.
         apiUpdateGeneralSettings(this.hass, this.modifiedSettingsObject).then(() => {
@@ -89,7 +91,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
                 <ha-card header="General Settings">
                 <ha-expansion-panel expanded=true header="Valves">
                     <div class="master-valve-config">
-                        <ha-switch .checked=${this.settingsObject?.use_master_valve || false} @change="${(e: Event) => {
+                        <ha-switch .checked=${this.modifiedSettingsObject?.use_master_valve || false} @change="${(e: Event) => {
                             this.updateGeneralSettings({
                                 use_master_valve: (e.target as any).checked
                             });
