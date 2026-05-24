@@ -1,7 +1,7 @@
 {
   "domain": "sprinkle",
   "name": "Sprinkle Irrigation Subsystem",
-  "version": "1.0.2",
+  "version": "1.2.0",
   "config_flow": true,
   "single_config_entry": true,
   "requirements": [],
