@@ -5,10 +5,11 @@
   "config_flow": true,
   "single_config_entry": true,
   "requirements": [],
-  "codeowners": ["@you"],
+  "codeowners": ["@bence056"],
   "dependencies": [
     "http",
     "panel_custom"
   ],
-"documentation": ""
+  "documentation": "",
+  "issue_tracker": ""
 }
