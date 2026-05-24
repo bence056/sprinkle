@@ -42,12 +42,12 @@ jobs:
       - name: Create Release
         run: |
           mkdir -p release/
-          cp -r .github/build/sprinkle release/
+          cp -r .github/build/sprinkle/* release/
 
       - name: Package project for release
         run: |
           cd release/
-          zip -r ./sprinkle.zip .
+          zip -r ./sprinkle.zip ./* -x '.*'
 
       - uses: JasonEtco/upload-to-release@master
         env:
