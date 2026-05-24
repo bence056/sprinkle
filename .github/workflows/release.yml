@@ -1,9 +1,8 @@
 name: Release
 
 on:
-  push:
-    tags: 
-      - "v*"
+  release:
+    types: [published]
 
 permissions:
   contents: write
@@ -21,38 +20,37 @@ jobs:
           node-version: 20
 
       - name: Install frontend dependencies
-        working-directory: ./frontend
+        working-directory: ./custom_components/sprinkle/frontend
         run: npm ci
 
       - name: Build frontend
-        working-directory: ./frontend
+        working-directory: ./custom_components/sprinkle/frontend
         run: npm run build
 
       - name: Create build folder
         run: |
           mkdir -p .github/build/sprinkle
 
-          cp -r ./* .github/build/sprinkle/
+          cp -r ./cusotm_components/sprinke/* .github/build/sprinkle/
 
           rm -rf .github/build/sprinkle/frontend/*
           
           mkdir -p .github/build/sprinkle/frontend/dist
 
-          cp ./frontend/dist/sprinkle-panel.js .github/build/sprinkle/frontend/dist/
+          cp ./custom_components/sprinkle/frontend/dist/sprinkle-panel.js .github/build/sprinkle/frontend/dist/
 
       - name: Create Release
         run: |
-          mkdir -p release/custom_components/
-          cp -r .github/build/sprinkle release/custom_components/
+          mkdir -p release/
+          cp -r .github/build/sprinkle release/
 
       - name: Package project for release
         run: |
           cd release/
-          TAG_NAME=${GITHUB_REF#refs/tags/}
-          ZIP_NAME=${TAG_NAME#v}
-          zip -r ./sprinkle-${ZIP_NAME}.zip .
+          zip -r ./sprinkle.zip .
 
-      - uses: softprops/action-gh-release@v3.0.0
+      - uses: JasonEtco/upload-to-release@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          files: ./release/sprinkle-*.zip
-          draft: true
+          args: ./release/alarmo.zip application/zip
