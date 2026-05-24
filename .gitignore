@@ -1,6 +1,6 @@
 __pycache__/
-frontend/node_modules
-frontend/dist
-frontend/import/frontend
+custom_components/sprinkle/frontend/node_modules
+custom_components/sprinkle/frontend/dist
+custom_components/sprinkle/frontend/import/frontend
 **/.DS_Store
 .idea/
