@@ -31,7 +31,7 @@ jobs:
         run: |
           mkdir -p .github/build/sprinkle
 
-          cp -r ./custom_components/sprinke/* .github/build/sprinkle/
+          cp -r ./custom_components/sprinkle/* .github/build/sprinkle/
 
           rm -rf .github/build/sprinkle/frontend/*
           
