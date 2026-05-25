@@ -125,7 +125,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
                             <br/><br/>This is useful if you want to prevent high pressure fluctuations and backflow.</ha-tooltip>
                         <ha-input .value=${this.modifiedSettingsObject?.valve_toggle_delay_ms || 500}
                                   @input=${(e: Event) => this.updateGeneralSettings({
-                                      valve_toggle_delay_ms: Number((e.target as HTMLInputElement).value)
+                                      valve_toggle_delay_ms: Math.max(Number((e.target as HTMLInputElement).value), 0)
                                   })}
                                   label="0 ms" type="number" min="0" max="5000" step="100" style="grid-area: input"></ha-input>
                         ${ this.settingsSaveNeeded ? 
