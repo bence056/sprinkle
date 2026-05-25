@@ -463,13 +463,23 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         zone_toggle.zone_valves = data[const.ATTR_ZONE_VALVES]
         #Edit it in the serializable data as well.
         zone_serializable: SprinkleZone = self.store.zones[zone_id]
-        zone_serializable.zone_valves = filter(lambda z: z != self.store.settings.master_valve_entity_id, data[const.ATTR_ZONE_VALVES])
+        filtered_valves = self.filter_valve_entities(data[const.ATTR_ZONE_VALVES])
+        zone_serializable.zone_valves = filtered_valves
         self.store.async_queue_save()
+
+    def filter_valve_entities(self, valves: list) -> list:
+        if self.store.settings.use_master_valve:
+            return valves
+        filtered_valves = []
+        for item in valves:
+            if item != self.store.settings.master_valve_entity_id:
+                filtered_valves.append(item)
+        return filtered_valves
 
     async def async_create_zone(self, zone_id: str, data: dict):
         # Create zone requested
         zone_name = data[const.ATTR_ZONE_NAME]
-        zone_valves = data[const.ATTR_ZONE_VALVES]
+        zone_valves = self.filter_valve_entities(data[const.ATTR_ZONE_VALVES])
 
         # create zone coordinator. It will create the entities as well.
         self.zones[zone_id] = SprinkleZoneCoordinator(self.hass, self, zone_id, zone_name, zone_valves)
