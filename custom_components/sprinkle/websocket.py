@@ -22,8 +22,7 @@ _LOGGER = logging.getLogger(__name__)
 @websocket_command({
     vol.Required("type"): "sprinkle_update_listen",
 })
-@async_response
-async def handle_subscribe_updates(hass, connection, msg):
+def handle_subscribe_updates(hass, connection: websocket_api.ActiveConnection, msg):
     """Handle subscribe updates."""
 
     @callback
