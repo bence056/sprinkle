@@ -1,21 +1,30 @@
 import {Cycle, GeneralSettings, HomeAssistant, Zone} from "./types";
-import {Part} from "lit";
 
 export const createZone = (hass: HomeAssistant, zone: Partial<Zone>) : Promise<boolean> => {
-    return hass.callApi('POST', 'sprinkle/zones', zone)
+    return hass.callWS({
+        type: "sprinkle/zone",
+        zone: zone
+    })
 }
 
 export const modifyZoneValves = (hass: HomeAssistant, zone_id: string, valve_list: string[]) : Promise<boolean> => {
-    return hass.callApi('POST', 'sprinkle/zones', {
-        zone_id: zone_id,
-        zone_valves: valve_list
+    return hass.callWS({
+        type: "sprinkle/zone",
+        zone:
+            {
+            zone_id: zone_id,
+            zone_valves: valve_list
+        }
     })
 }
 
 export const deleteZone = (hass: HomeAssistant, zone_id: string) : Promise<boolean> => {
-    return hass.callApi('POST', 'sprinkle/zones', {
-        zone_id: zone_id,
-        zone_delete: true
+    return hass.callWS({
+        type: "sprinkle/zone",
+        zone: {
+            zone_id: zone_id,
+            zone_delete: true
+        }
     })
 }
 
@@ -26,17 +35,26 @@ export const getZones = (hass: HomeAssistant) : Promise<Zone[]> => {
 }
 
 export const createCycle = (hass: HomeAssistant, cycle: Partial<Cycle>) : Promise<boolean> => {
-    return hass.callApi('POST', 'sprinkle/cycles', cycle)
+    return hass.callWS({
+        type: "sprinkle/cycle",
+        cycle: cycle
+    })
 }
 
 export const modifyCycle = (hass: HomeAssistant, cycle: Partial<Cycle>) : Promise<boolean> => {
-    return hass.callApi('POST', 'sprinkle/cycles', cycle)
+    return hass.callWS({
+        type: "sprinkle/cycle",
+        cycle: cycle
+    })
 }
 
 export const deleteCycle = (hass: HomeAssistant, cycle_id: string) : Promise<boolean> => {
-    return hass.callApi('POST', 'sprinkle/cycles', {
-        cycle_id: cycle_id,
-        cycle_delete: true
+    return hass.callWS({
+        type: "sprinkle/cycle",
+        cycle: {
+            cycle_id: cycle_id,
+            cycle_delete: true
+        }
     })
 }
 
@@ -53,6 +71,9 @@ export const getGeneralSettings = (hass: HomeAssistant) : Promise<GeneralSetting
 }
 
 
-export const apiUpdateGeneralSettings = (hass: HomeAssistant, settingsObject: Partial<GeneralSettings>) : Promise<boolean> => {
-    return hass.callApi('POST', 'sprinkle/generalSettings', settingsObject);
+export const updateGeneralSettings = (hass: HomeAssistant, settingsObject: Partial<GeneralSettings>) : Promise<boolean> => {
+    return hass.callWS({
+        type: "sprinkle/gs",
+        settings: settingsObject
+    })
 }

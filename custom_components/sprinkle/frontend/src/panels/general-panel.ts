@@ -4,7 +4,7 @@ import {GeneralSettings, HomeAssistant, Zone} from '../types';
 import {commonStyle} from "../style";
 import {SubscribeMixin} from "../subscribe-mixin";
 import {UnsubscribeFunc} from "home-assistant-js-websocket";
-import {getGeneralSettings, apiUpdateGeneralSettings, getZones} from "../websockets";
+import {getGeneralSettings, updateGeneralSettings as apiUpdateGeneralSettings, getZones} from "../websockets";
 import {getValveEntities, getValveName} from "../helpers";
 
 @customElement('general-panel')

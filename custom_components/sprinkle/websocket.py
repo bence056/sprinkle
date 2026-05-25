@@ -84,84 +84,60 @@ async def sprinkle_get_gs(hass: HomeAssistant, connection: websocket_api.ActiveC
     connection.send_result(msg["id"],  response)
 
 
-class SprinkleZonesView(HomeAssistantView):
-
-    url = "/api/sprinkle/zones"
-    name = "api:sprinkle:zones"
-
-    @RequestDataValidator(
-        vol.Schema(
-            {
-                vol.Required(const.ATTR_ZONE_ID): cv.string,
-                vol.Optional(const.ATTR_ZONE_DELETE): cv.boolean,
-                vol.Optional(const.ATTR_ZONE_NAME): cv.string,
-                vol.Optional(const.ATTR_ZONE_VALVES): vol.All(
-                    cv.ensure_list,
-                    [cv.entity_id]
-                )
-
-            }
-        )
-    )
-
-    async def post(self, request: Request, data):
-        hass: HomeAssistant = request.app["hass"]
-        coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
-
-        await coordinator.async_update_zone_config(data[const.ATTR_ZONE_ID], data)
+@websocket_command(
+    {
+        vol.Required("type"): "sprinkle/zone",
+        vol.Required("zone"): {
+            vol.Required(const.ATTR_ZONE_ID): cv.string,
+            vol.Optional(const.ATTR_ZONE_DELETE): cv.boolean,
+            vol.Optional(const.ATTR_ZONE_NAME): cv.string,
+            vol.Optional(const.ATTR_ZONE_VALVES): vol.All(
+                cv.ensure_list,
+                [cv.entity_id]
+            )
+        }
+    })
+@async_response
+async def sprinkle_update_zone(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
+    await coordinator.async_update_zone_config(msg["zone"][const.ATTR_ZONE_ID], msg["zone"])
+    connection.send_result(msg["id"], True)
 
 
-class SprinkleCyclesView(HomeAssistantView):
-
-    url = "/api/sprinkle/cycles"
-    name = "api:sprinkle:cycles"
-
-    @RequestDataValidator(
-        vol.Schema(
-            {
-                vol.Required(const.ATTR_CYCLE_ID): cv.string,
-                vol.Optional(const.ATTR_CYCLE_DELETE): cv.boolean,
-                vol.Optional(const.ATTR_CYCLE_NAME): cv.string,
-                vol.Optional(const.ATTR_CYCLE_STEPS): cv.ensure_list
-
-            }
-        )
-    )
-
-    async def post(self, request: Request, data):
-        hass: HomeAssistant = request.app["hass"]
-        coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
-
-        await coordinator.async_update_cycle_config(data[const.ATTR_CYCLE_ID], data)
+@websocket_command(
+    {
+        vol.Required("type"): "sprinkle/cycle",
+        vol.Required("cycle"): {
+            vol.Required(const.ATTR_CYCLE_ID): cv.string,
+            vol.Optional(const.ATTR_CYCLE_DELETE): cv.boolean,
+            vol.Optional(const.ATTR_CYCLE_NAME): cv.string,
+            vol.Optional(const.ATTR_CYCLE_STEPS): cv.ensure_list
+        }
+    })
+@async_response
+async def sprinkle_update_cycle(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
+    await coordinator.async_update_cycle_config(msg["cycle"][const.ATTR_CYCLE_ID], msg["cycle"])
+    connection.send_result(msg["id"], True)
 
 
-class SprinkleGeneralSettingsView(HomeAssistantView):
-
-    url = "/api/sprinkle/generalSettings"
-    name = "api:sprinkle:general_settings"
-
-    @RequestDataValidator(
-        vol.Schema(
-            {
-
-                vol.Required(const.ATTR_SETTINGS_USE_MASTER_VALVE): cv.boolean,
-                vol.Required(const.ATTR_SETTINGS_MASTER_VALVE_ID): vol.Any(
-                    cv.entity_id,
-                    ""
-                ),
-                vol.Required(const.ATTR_SETTINGS_VALVE_TOGGLE_DELAY_MS): cv.positive_int,
-
-            }
-        )
-    )
-
-    async def post(self, request: Request, data):
-        hass: HomeAssistant = request.app["hass"]
-        coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
-
-        await coordinator.async_update_general_settings(data)
-
-
+@websocket_command(
+    {
+        vol.Required("type"): "sprinkle/gs",
+        vol.Required("settings"): {
+            vol.Required(const.ATTR_SETTINGS_USE_MASTER_VALVE): cv.boolean,
+            vol.Required(const.ATTR_SETTINGS_MASTER_VALVE_ID): vol.Any(
+                cv.entity_id,
+                ""
+            ),
+            vol.Required(const.ATTR_SETTINGS_VALVE_TOGGLE_DELAY_MS): cv.positive_int
+        }
+    })
+@async_response
+async def sprinkle_update_gs(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
+    await coordinator.async_update_general_settings(msg["settings"])
+    connection.send_result(msg["id"], True)
 
 
 def register_websockets(hass: HomeAssistant):
@@ -170,6 +146,6 @@ def register_websockets(hass: HomeAssistant):
     async_register_command(hass, sprinkle_get_zones)
     async_register_command(hass, sprinkle_get_cycles)
     async_register_command(hass, sprinkle_get_gs)
-    hass.http.register_view(SprinkleZonesView)
-    hass.http.register_view(SprinkleCyclesView)
-    hass.http.register_view(SprinkleGeneralSettingsView)
+    async_register_command(hass, sprinkle_update_zone)
+    async_register_command(hass, sprinkle_update_cycle)
+    async_register_command(hass, sprinkle_update_gs)
