@@ -1,5 +1,5 @@
 import { LitElement, html, css } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
+import {customElement, property, state} from 'lit/decorators.js';
 import { HomeAssistant, Cycle, CycleStep } from '../types';
 import { commonStyle } from "../style";
 import { SubscribeMixin } from "../subscribe-mixin";
@@ -10,7 +10,8 @@ import { getValveName, createSimpleUUID } from "../helpers";
 @customElement('cycle-panel')
 export class CyclePanel extends SubscribeMixin(LitElement) {
 
-    hass!: HomeAssistant;
+    @property({ attribute: false }) hass!: HomeAssistant;
+    @property({ type: Boolean, reflect: true }) public narrow!: boolean;
 
     @state() private cycles: Cycle[] = [];
     @state() private editingCycle: Cycle | null = null;
@@ -61,11 +62,11 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
                 <ha-card header="Cycles">
                     ${this.cycles.map(cycle => html`
                         <ha-card>
-                            <div class="zone-entry">
+                            <div class="cycle-entry">
                                 <div><strong>${cycle.cycle_name}</strong></div>
-                                <div class="zone-valves">
+                                <div class="cycle-steps">
                                     ${cycle.cycle_steps.map(step => html`
-                                        <div class="zone-valve-item">
+                                        <div class="cycle-step-item">
                                             <ha-icon icon="mdi:grass"></ha-icon>
                                                 ${this.availableZones.find((z) => z.id === step.zone_id)?.name || "N/A"}:
                                             <ha-icon icon="mdi:timer-marker-outline"></ha-icon>
@@ -73,7 +74,7 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
                                         </div>
                                     `)}
                                 </div>
-                                <div class="zone-actions">
+                                <div class="cycle-actions">
                                     <ha-button @click=${() => this.openCycleDialog(cycle)}>Modify</ha-button>
                                     <ha-button @click=${() => this.deleteCycle(cycle.cycle_id)}>Delete</ha-button>
                                 </div>

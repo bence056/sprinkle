@@ -1,4 +1,4 @@
-import { LitElement, html, css } from 'lit';
+import {LitElement, html, css, CSSResultGroup} from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { HomeAssistant, Zone } from '../types';
 import {getValveName, getValveEntities, getValveIcon, createSimpleUUID} from "../helpers";
@@ -10,7 +10,8 @@ import {createZone, deleteZone as apiDeleteZone, getGeneralSettings, getZones, m
 @customElement('zone-panel')
 export class ZonePanel extends SubscribeMixin(LitElement) {
 
-    hass!: HomeAssistant;
+    @property({ attribute: false }) hass!: HomeAssistant;
+    @property({ type: Boolean, reflect: true }) public narrow!: boolean;
 
     @state() private zones: Zone[] = [];
     @state() private master_valve: string = ""

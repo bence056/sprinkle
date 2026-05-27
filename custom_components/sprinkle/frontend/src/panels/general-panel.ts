@@ -10,7 +10,9 @@ import {getValveEntities, getValveName} from "../helpers";
 @customElement('general-panel')
 export class ZonePanel extends SubscribeMixin(LitElement) {
 
-    hass!: HomeAssistant;
+    @property({ attribute: false }) hass!: HomeAssistant;
+    @property({ type: Boolean, reflect: true }) public narrow!: boolean;
+
     private settingsObject!: GeneralSettings;
     @state()
     private modifiedSettingsObject!: GeneralSettings;
@@ -67,7 +69,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
                 grid-template-columns: auto auto;
                 justify-content: start;
                 align-content: center;
-                width: 30%;
+                max-width: 300px;
                 margin-bottom: 30px;
             }
             
@@ -78,7 +80,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
                 grid-template-columns: auto auto;
                 justify-content: start;
                 align-content: center;
-                width: 30%;
+                max-width: 300px;
                 margin-bottom: 30px;
             }
             
@@ -127,7 +129,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
                                   @input=${(e: Event) => this.updateGeneralSettings({
                                       valve_toggle_delay_ms: Math.max(Number((e.target as HTMLInputElement).value), 0)
                                   })}
-                                  label="0 ms" type="number" min="0" max="5000" step="100" style="grid-area: input"></ha-input>
+                                  label="ms" type="number" min="0" max="5000" step="100" style="grid-area: input"></ha-input>
                         ${ this.settingsSaveNeeded ? 
                                 html`<ha-button style="grid-area: save" @click=${() => {this.onSettingsSaveRequested();} }>Save</ha-button>` : ""}
                      

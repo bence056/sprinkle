@@ -37,9 +37,9 @@ export class SprinklePanel extends LitElement {
             <ha-menu-button .hass=${this.hass} .narrow=${this.narrow}></ha-menu-button>` : null}
         </div>
         
-        <general-panel .hass="${this.hass}"></general-panel>
-        <zone-panel .hass="${this.hass}"></zone-panel>
-        <cycle-panel .hass="${this.hass}"></cycle-panel>
+        <general-panel .hass=${this.hass} .narrow=${this.narrow}></general-panel>
+        <zone-panel .hass=${this.hass} .narrow=${this.narrow}></zone-panel>
+        <cycle-panel .hass=${this.hass} .narrow=${this.narrow}></cycle-panel>
     `
   }
 
