@@ -18,11 +18,16 @@ export class SprinklePanel extends LitElement {
             width: 100%;
             margin: 0;
             padding: 0;
-            height: 50px;
+            max-height: 60px;
             background: var(--primary-color);
+            background: white;
             display: flex;
             align-items: center;
             justify-content: start;
+          }
+          
+          .header .tabs {
+              align-self: end;
           }
           
       `
@@ -35,6 +40,12 @@ export class SprinklePanel extends LitElement {
         <div class="header">
             ${this.narrow ? html`
             <ha-menu-button .hass=${this.hass} .narrow=${this.narrow}></ha-menu-button>` : null}
+            <div class="tabs">
+                <ha-tab-group @wa-tab-show=${(e) => console.log(e.detail.name)}>
+                <ha-tab-group-tab panel="test">Test</ha-tab-group-tab>
+                <ha-tab-group-tab panel="test2">Test2</ha-tab-group-tab>
+            </ha-tab-group>
+            </div>
         </div>
         
         <general-panel .hass=${this.hass} .narrow=${this.narrow}></general-panel>
