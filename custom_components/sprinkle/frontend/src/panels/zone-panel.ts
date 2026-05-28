@@ -126,34 +126,45 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
     @state() private selectedZoneTab = "general";
 
     private zoneDialogGeneral() {
-        return html`
-            <ha-input
-                    label="Zone Name"
-                    .value=${this.zoneNameInput}
-                    @input=${(e: Event) => this.zoneNameInput = (e.target as HTMLInputElement).value}
-                    ?disabled=${this.zoneDialogModifyOnly}
-            ></ha-input>
-            <div class="valve-checkboxes">
-                ${getValveEntities(this.hass).filter((a) => a != this.master_valve)
-                        .sort((a, b) =>
-                                getValveName(this.hass, a).localeCompare(getValveName(this.hass, b)))
-                        .map(id => html`
-                            <label class="valve-select-row">
-                                <ha-checkbox
-                                        .checked=${this.selectedValves.has(id)}
-                                        @change=${(e: Event) => this.toggleValve(id, (e.target as HTMLInputElement).checked)}
-                                ></ha-checkbox>
-                                ${getValveName(this.hass, id)}
-                                <ha-icon icon=${getValveIcon(this.hass, id)}></ha-icon>
-                            </label>
-                        `)}
-            </div>
-        `;
+
     }
 
     private renderZoneDialogInner() {
-        if(this.selectedZoneTab == "general") {
-            return this.zoneDialogGeneral();
+        if (this.selectedZoneTab == "general") {
+            return html`
+                <ha-input
+                        label="Zone Name"
+                        .value=${this.zoneNameInput}
+                        @input=${(e: Event) => this.zoneNameInput = (e.target as HTMLInputElement).value}
+                        ?disabled=${this.zoneDialogModifyOnly}
+                ></ha-input>
+                <div class="valve-checkboxes">
+                    ${getValveEntities(this.hass).filter((a) => a != this.master_valve)
+                            .sort((a, b) =>
+                                    getValveName(this.hass, a).localeCompare(getValveName(this.hass, b)))
+                            .map(id => html`
+                                <label class="valve-select-row">
+                                    <ha-checkbox
+                                            .checked=${this.selectedValves.has(id)}
+                                            @change=${(e: Event) => this.toggleValve(id, (e.target as HTMLInputElement).checked)}
+                                    ></ha-checkbox>
+                                    ${getValveName(this.hass, id)}
+                                    <ha-icon icon=${getValveIcon(this.hass, id)}></ha-icon>
+                                </label>
+                            `)}
+                </div>
+            `;
+        } else if (this.selectedZoneTab == "advanced") {
+            return html`
+                
+                <div class="advanced-settings">
+                    WIP
+                </div>
+
+                
+
+
+            `
         }
         return null;
     }

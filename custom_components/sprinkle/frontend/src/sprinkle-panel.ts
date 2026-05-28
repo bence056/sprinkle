@@ -11,6 +11,8 @@ export class SprinklePanel extends LitElement {
   @property({ attribute: false }) hass!: HomeAssistant;
   @property({ type: Boolean, reflect: true }) public narrow!: boolean;
 
+  @state() tab: string = "setup"
+
   static styles = [
       commonStyle,
       css`
@@ -33,6 +35,18 @@ export class SprinklePanel extends LitElement {
       `
   ];
 
+  private renderTabs() {
+
+      if(this.tab == "setup") {
+          return html`
+          <general-panel .hass=${this.hass} .narrow=${this.narrow}></general-panel>
+        <zone-panel .hass=${this.hass} .narrow=${this.narrow}></zone-panel>
+        <cycle-panel .hass=${this.hass} .narrow=${this.narrow}></cycle-panel>
+          `
+      }
+      return null;
+  }
+
   render() {
       console.log(this.narrow);
     return html`
@@ -41,16 +55,14 @@ export class SprinklePanel extends LitElement {
             ${this.narrow ? html`
             <ha-menu-button .hass=${this.hass} .narrow=${this.narrow}></ha-menu-button>` : null}
             <div class="tabs">
-                <ha-tab-group @wa-tab-show=${(e) => console.log(e.detail.name)}>
-                <ha-tab-group-tab panel="test">Test</ha-tab-group-tab>
-                <ha-tab-group-tab panel="test2">Test2</ha-tab-group-tab>
+                <ha-tab-group @wa-tab-show=${(e: CustomEvent) => this.tab = e.detail.name}>
+                <ha-tab-group-tab panel="setup">Setup</ha-tab-group-tab>
+                <ha-tab-group-tab panel="schedule">Scheduling</ha-tab-group-tab>
             </ha-tab-group>
             </div>
         </div>
         
-        <general-panel .hass=${this.hass} .narrow=${this.narrow}></general-panel>
-        <zone-panel .hass=${this.hass} .narrow=${this.narrow}></zone-panel>
-        <cycle-panel .hass=${this.hass} .narrow=${this.narrow}></cycle-panel>
+        ${this.renderTabs()}
     `
   }
 
