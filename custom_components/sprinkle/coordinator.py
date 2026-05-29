@@ -291,6 +291,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
 
     async def async_setup(self):
 
+
         device_info = {
             "identifiers": {(DOMAIN, self.entry.unique_id)},
             "name": const.NAME,
@@ -319,6 +320,15 @@ class SprinkleCoordinator(DataUpdateCoordinator):
 
         #handle rain delay configuration upon starting.
         await self.async_process_rain_delay()
+
+    async def async_unload(self):
+
+        await self.async_stop_all_cycles_and_zones()
+
+    async def async_remove(self):
+
+        await self.async_stop_all_cycles_and_zones()
+
 
     async def open_master_valve(self):
         if(self.store.settings.use_master_valve):
@@ -562,11 +572,6 @@ class SprinkleCoordinator(DataUpdateCoordinator):
                 await self.cycles[cycle_id].async_stop_cycle()
                 del self.cycles[cycle_id]
 
-
-    async def async_delete_config(self):
-        """Wipe storage and config"""
-        await self.store.async_delete()
-
     async def async_update_rain_delay_expiry(self, rain_delay_expiry_timestamp):
 
         new_time = int(rain_delay_expiry_timestamp.timestamp())
@@ -594,6 +599,6 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         if self.active_zone is not None:
             await self.active_zone.async_stop_run()
 
-def try_get_coordinator(hass: HomeAssistant) -> SprinkleCoordinator:
-    return hass.data[const.DOMAIN]["coordinator"]
-
+def try_get_coordinator(hass: HomeAssistant, entry: ConfigEntry) -> SprinkleCoordinator:
+    entry_obj = hass.data[const.DOMAIN]["config_entries"][entry.entry_id]
+    return entry_obj

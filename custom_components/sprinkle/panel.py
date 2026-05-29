@@ -3,6 +3,7 @@ import os
 from homeassistant.components import panel_custom
 from homeassistant.components import frontend
 from homeassistant.components.http import StaticPathConfig
+from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
     CUSTOM_COMPONENTS,
@@ -28,9 +29,12 @@ async def async_register_panel(hass):
     panel_dir = os.path.join(root_dir, PANEL_FOLDER)
     view_url = os.path.join(panel_dir, PANEL_FILENAME)
 
-    await hass.http.async_register_static_paths(
-        [StaticPathConfig(PANEL_URL, view_url, cache_headers=False)]
-    )
+    try:
+        await hass.http.async_register_static_paths(
+            [StaticPathConfig(PANEL_URL, view_url, cache_headers=False)]
+        )
+    except RuntimeError:
+        pass
 
     await panel_custom.async_register_panel(
         hass,
@@ -45,7 +49,7 @@ async def async_register_panel(hass):
     )
 
 
-async def async_unregister_panel(hass):
+def async_unregister_panel(hass):
     frontend.async_remove_panel(hass, DOMAIN)
     _LOGGER.debug("Unregistering panel")
 

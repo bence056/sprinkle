@@ -1,21 +1,30 @@
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
 import logging
 
+from .setup_manager import SprinkleSetupManager, try_get_setup_manager
 from .websocket import register_websockets
 from .store import async_get_registry
-from .coordinator import SprinkleCoordinator
+from .coordinator import SprinkleCoordinator, try_get_coordinator
 
 from .const import DOMAIN, PLATFORMS
-from .panel import (
-    async_register_panel,
-    async_unregister_panel
-)
 
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
 
 
 _LOGGER = logging.getLogger(__name__)
+
+async def async_setup(hass: HomeAssistant, config):
+
+    hass.data.setdefault(const.DOMAIN, {
+        "manager": None,
+        "config_entries": {},
+    })
+
+    store_obj = await async_get_registry(hass)
+    hass.data[const.DOMAIN]["manager"] = SprinkleSetupManager(hass, store_obj)
+
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -32,47 +41,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         manufacturer=const.MANUFACTURER,
     )
 
-
-    hass.data.setdefault(const.DOMAIN, {
-        "coordinator": None,
-        "config": {
-            "entities": {}
-        },
-        "zones":{},
-        "cycles": {}
-    })
-
+    _LOGGER.info(f"Creating configuration entry for {entry.title}")
     # create the default controller entities after controller flow creation.
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    store_obj = await async_get_registry(hass)
-    coordinator = SprinkleCoordinator(hass, entry, store_obj)
-    await coordinator.async_setup()
-    hass.data[const.DOMAIN]["coordinator"] = coordinator
-
-
-
-    # Setup the side panel.
-    await async_register_panel(hass)
-    #Register the websockets.
-    register_websockets(hass)
-
-    #load the saved config from storage and create entities.
-
+    await try_get_setup_manager(hass).async_setup(entry)
 
     return True
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    #stop all zones and cycles.
-    await async_unregister_panel(hass)
-    coordinator: SprinkleCoordinator = hass.data[const.DOMAIN]["coordinator"]
-    await coordinator.async_stop_all_cycles_and_zones()
+    _LOGGER.info(f"Unloading configuration entry for {entry.title}")
+    await try_get_setup_manager(hass).async_unload(entry)
     await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     return True
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Integration removal cleanup"""
-    await async_unregister_panel(hass)
-    coordinator: SprinkleCoordinator = hass.data[DOMAIN]["coordinator"]
-    await coordinator.async_delete_config()
-    del hass.data[DOMAIN]
+    _LOGGER.info(f"Removing configuration entry for {entry.title}")
+    await try_get_setup_manager(hass).async_remove(entry)
