@@ -17,7 +17,7 @@ from .const import DOMAIN, VERSION, CYCLE_RUNNING, CYCLE_IDLE
 from .number import ZoneRunDurationNumber, RainDelayDurationNumber
 from .sensor import ZoneStatusSensor, ZoneIrrigationFinishTime, RainDelayExpiry, CycleRemainingMinutes, \
     CycleStatusSensor
-from .store import SprinkleStorage, SprinkleZone, SprinkleCycleStep
+from .store import SprinkleStorage, SprinkleZone, SprinkleCycleStep, SprinkleEntryStorage
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -286,6 +286,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         self.active_cycle = None
         self.rain_delay_callback_obj = None
         self.rain_delay_active = False
+        self.substore: SprinkleEntryStorage = store.load_entry(entry)
         super().__init__(hass, _LOGGER, name=DOMAIN)
 
 

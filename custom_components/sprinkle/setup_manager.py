@@ -26,7 +26,6 @@ class SprinkleSetupManager:
     async def async_setup(self, entry: ConfigEntry):
         coordinator = SprinkleCoordinator(self.hass, entry, self.store_obj)
         self.hass.data[DOMAIN]["config_entries"][entry.entry_id] = coordinator
-        coordinator.store.load_entry(entry)
         await self.hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
         await coordinator.async_setup()

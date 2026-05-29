@@ -172,8 +172,8 @@ class SprinkleStorage:
 
             if "entries" in data:
                 #We can pass the data to the entryStorage
-                entry_dataset = data["entries"]
-                for entry_id, entry_data in entry_dataset:
+                entry_dataset: dict = data["entries"]
+                for entry_id, entry_data in entry_dataset.items():
                     entry_storage = SprinkleEntryStorage(self.hass, entry_id, self)
                     await entry_storage.async_load(entry_data)
                     entries[entry_id] = entry_storage

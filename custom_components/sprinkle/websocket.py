@@ -60,7 +60,7 @@ def sprinkle_log(hass: HomeAssistant, connection: websocket_api.ActiveConnection
 @async_response
 async def sprinkle_get_zones(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
     coordinator: SprinkleCoordinator = try_get_coordinator_by_id(hass, msg["entry"])
-    response = [attr.asdict(z) for z in coordinator.entry_store().zones.values()]
+    response = [attr.asdict(z) for z in coordinator.substore.zones.values()]
     connection.send_result(msg["id"],  response)
 
 
@@ -72,7 +72,7 @@ async def sprinkle_get_zones(hass: HomeAssistant, connection: websocket_api.Acti
 @async_response
 async def sprinkle_get_cycles(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
     coordinator: SprinkleCoordinator = try_get_coordinator_by_id(hass, msg["entry"])
-    response = [attr.asdict(c) for c in coordinator.entry_store().cycles.values()]
+    response = [attr.asdict(c) for c in coordinator.substore.cycles.values()]
     connection.send_result(msg["id"],  response)
 
 @websocket_command(
@@ -83,7 +83,7 @@ async def sprinkle_get_cycles(hass: HomeAssistant, connection: websocket_api.Act
 @async_response
 async def sprinkle_get_gs(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
     coordinator: SprinkleCoordinator = try_get_coordinator_by_id(hass, msg["entry"])
-    response = attr.asdict(coordinator.entry_store().settings)
+    response = attr.asdict(coordinator.substore.settings)
     connection.send_result(msg["id"],  response)
 
 
