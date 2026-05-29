@@ -65,10 +65,15 @@ export class SprinklePanel extends LitElement {
 
         if (this.tab == "setup") {
             return html`
-                <general-panel .hass=${this.hass} .narrow=${this.narrow}></general-panel>
+                
+            `
+            /*
+
+            <general-panel .hass=${this.hass} .narrow=${this.narrow}></general-panel>
                 <zone-panel .hass=${this.hass} .narrow=${this.narrow}></zone-panel>
                 <cycle-panel .hass=${this.hass} .narrow=${this.narrow}></cycle-panel>
-            `
+             */
+
         }
         return null;
     }
