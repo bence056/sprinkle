@@ -17,7 +17,7 @@ from .const import DOMAIN, VERSION, CYCLE_RUNNING, CYCLE_IDLE
 from .number import ZoneRunDurationNumber, RainDelayDurationNumber
 from .sensor import ZoneStatusSensor, ZoneIrrigationFinishTime, RainDelayExpiry, CycleRemainingMinutes, \
     CycleStatusSensor
-from .store import SprinkleStorage, SprinkleZone, SprinkleCycleStep
+from .store import SprinkleStorage, SprinkleZone, SprinkleCycleStep, SprinkleEntryWrapper
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -289,6 +289,9 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         super().__init__(hass, _LOGGER, name=DOMAIN)
 
 
+    def entry_store(self) -> SprinkleEntryWrapper:
+        return self.store.entry(self.entry)
+
     async def async_setup(self):
 
 
@@ -313,9 +316,9 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         async_add_numbers([self.rain_delay_number_entity])
         async_add_buttons([self.rain_delay_setter_entity])
 
-        for key,value in self.store.zones.items():
+        for key,value in self.store.entry(self.entry).zones.items():
             await self.async_create_zone(key, attr.asdict(value))
-        for key,value in self.store.cycles.items():
+        for key,value in self.store.entry(self.entry).cycles.items():
             await self.async_create_cycle(key, attr.asdict(value))
 
         #handle rain delay configuration upon starting.
@@ -331,8 +334,8 @@ class SprinkleCoordinator(DataUpdateCoordinator):
 
 
     async def open_master_valve(self):
-        if(self.store.settings.use_master_valve):
-            valve = self.store.settings.master_valve_entity_id
+        if(self.store.entry(self.entry).settings.use_master_valve):
+            valve = self.store.entry(self.entry).settings.master_valve_entity_id
             await self.hass.services.async_call(
                 "valve",  # domain
                 "open_valve",  # service
@@ -341,8 +344,8 @@ class SprinkleCoordinator(DataUpdateCoordinator):
             )
 
     async def close_master_valve(self):
-        if (self.store.settings.use_master_valve):
-            valve = self.store.settings.master_valve_entity_id
+        if (self.store.entry(self.entry).settings.use_master_valve):
+            valve = self.store.entry(self.entry).settings.master_valve_entity_id
             await self.hass.services.async_call(
                 "valve",  # domain
                 "close_valve",  # service
@@ -351,9 +354,9 @@ class SprinkleCoordinator(DataUpdateCoordinator):
             )
 
     async def delay_valve_opening(self):
-        if(self.store.settings.valve_toggle_delay_ms >= 100):
+        if(self.store.entry(self.entry).settings.valve_toggle_delay_ms >= 100):
             #wait for x ms
-            await asyncio.sleep(self.store.settings.valve_toggle_delay_ms / 1000)
+            await asyncio.sleep(self.store.entry(self.entry).settings.valve_toggle_delay_ms / 1000)
 
     async def async_rain_delay_setter_pressed(self):
 
@@ -362,7 +365,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         await self.async_update_rain_delay_expiry(self.rain_delay_expiry_entity.native_value)
 
     async def async_process_rain_delay(self):
-        expiry_timestamp: datetime = dt.as_local(dt.utc_from_timestamp(self.store.config.rain_delay_end_time_seconds))
+        expiry_timestamp: datetime = dt.as_local(dt.utc_from_timestamp(self.store.entry(self.entry).config.rain_delay_end_time_seconds))
         #if we have a rain delay callback set, just end it, we will set it again
         if self.rain_delay_callback_obj:
             self.rain_delay_callback_obj()
@@ -416,12 +419,12 @@ class SprinkleCoordinator(DataUpdateCoordinator):
 
     async def async_update_general_settings(self, data: dict):
         await self.async_stop_all_cycles_and_zones()
-        self.store.settings.use_master_valve = data[const.ATTR_SETTINGS_USE_MASTER_VALVE];
-        self.store.settings.master_valve_entity_id = data[const.ATTR_SETTINGS_MASTER_VALVE_ID]
-        if(self.store.settings.use_master_valve == False):
-            self.store.settings.master_valve_entity_id = ""
-        self.store.settings.valve_toggle_delay_ms = data[const.ATTR_SETTINGS_VALVE_TOGGLE_DELAY_MS]
-        self.store.async_queue_save();
+        self.store.entry(self.entry).settings.use_master_valve = data[const.ATTR_SETTINGS_USE_MASTER_VALVE];
+        self.store.entry(self.entry).settings.master_valve_entity_id = data[const.ATTR_SETTINGS_MASTER_VALVE_ID]
+        if(self.store.entry(self.entry).settings.use_master_valve == False):
+            self.store.entry(self.entry).settings.master_valve_entity_id = ""
+        self.store.entry(self.entry).settings.valve_toggle_delay_ms = data[const.ATTR_SETTINGS_VALVE_TOGGLE_DELAY_MS]
+        self.store.async_queue_save()
         homeassistant.helpers.dispatcher.async_dispatcher_send(self.hass, "sprinkle_update_dispatch")
 
 
@@ -434,7 +437,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
             #Delete zone requested
             await self.async_delete_zone(zone_id)
         else:
-            if zone_id in self.store.zones.keys():
+            if zone_id in self.store.entry(self.entry).zones.keys():
                 #Modify zone
                 await self.async_modify_zone(zone_id, data)
             else:
@@ -452,7 +455,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
             # Delete cycle requested
             await self.async_delete_cycle(cycle_id)
         else:
-            if cycle_id in self.store.cycles.keys():
+            if cycle_id in self.store.entry(self.entry).cycles.keys():
                 # Modify cycle
                 await self.async_modify_cycle(cycle_id, data)
             else:
@@ -472,17 +475,17 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         zone_toggle: ZoneStartRunButton = self.zones[zone_id].zone_run_trigger_entity
         zone_toggle.zone_valves = data[const.ATTR_ZONE_VALVES]
         #Edit it in the serializable data as well.
-        zone_serializable: SprinkleZone = self.store.zones[zone_id]
+        zone_serializable: SprinkleZone = self.store.entry(self.entry).zones[zone_id]
         filtered_valves = self.filter_valve_entities(data[const.ATTR_ZONE_VALVES])
         zone_serializable.zone_valves = filtered_valves
         self.store.async_queue_save()
 
     def filter_valve_entities(self, valves: list) -> list:
-        if self.store.settings.use_master_valve:
+        if self.store.entry(self.entry).settings.use_master_valve:
             return valves
         filtered_valves = []
         for item in valves:
-            if item != self.store.settings.master_valve_entity_id:
+            if item != self.store.entry(self.entry).settings.master_valve_entity_id:
                 filtered_valves.append(item)
         return filtered_valves
 
@@ -515,7 +518,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
             #check if there are cycles that contain this zone.
             cycles_to_delete: list[str] = []
             store_modified = False
-            for key,value in self.store.cycles.items():
+            for key,value in self.store.entry(self.entry).cycles.items():
 
                 to_remove: list[SprinkleCycleStep] = []
                 for cycle_step in value.cycle_steps:
@@ -575,8 +578,8 @@ class SprinkleCoordinator(DataUpdateCoordinator):
     async def async_update_rain_delay_expiry(self, rain_delay_expiry_timestamp):
 
         new_time = int(rain_delay_expiry_timestamp.timestamp())
-        if self.store.config.rain_delay_end_time_seconds != new_time:
-            self.store.config.rain_delay_end_time_seconds = new_time
+        if self.store.entry(self.entry).config.rain_delay_end_time_seconds != new_time:
+            self.store.entry(self.entry).config.rain_delay_end_time_seconds = new_time
             self.store.async_queue_save()
             await self.async_process_rain_delay()
 
@@ -601,4 +604,8 @@ class SprinkleCoordinator(DataUpdateCoordinator):
 
 def try_get_coordinator(hass: HomeAssistant, entry: ConfigEntry) -> SprinkleCoordinator:
     entry_obj = hass.data[const.DOMAIN]["config_entries"][entry.entry_id]
+    return entry_obj
+
+def try_get_coordinator_by_id(hass: HomeAssistant, entry_id: str) -> SprinkleCoordinator:
+    entry_obj = hass.data[const.DOMAIN]["config_entries"][entry_id]
     return entry_obj

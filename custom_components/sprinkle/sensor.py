@@ -4,6 +4,8 @@ from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt
+
+from . import SprinkleCoordinator
 from .const import DOMAIN, ZONE_RUNNING_CYCLE, ZONE_IDLE, ZONE_RAIN_DELAY, ZONE_RUNNING_MANUAL, CYCLE_IDLE, CYCLE_RAIN_DELAY, CYCLE_RUNNING
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
@@ -92,9 +94,9 @@ class RainDelayExpiry(SensorEntity):
         self._attr_unique_id = f"{DOMAIN}_rain_delay_expiry"
         self._attr_name = f"Rain Delay Expiry"
         self._attr_device_info = device_info
-        self._coordinator = coordinator
+        self._coordinator: SprinkleCoordinator = coordinator
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
-        self._next_time = dt.as_local(dt.utc_from_timestamp(self._coordinator.store.config.rain_delay_end_time_seconds))
+        self._next_time = dt.as_local(dt.utc_from_timestamp(self._coordinator.store.entry(self._coordinator.entry).config.rain_delay_end_time_seconds))
 
     @property
     def device_info(self):

@@ -15,7 +15,7 @@ PANEL_NAME = "sprinkle-panel"
 
 STORAGE_KEY = f"{DOMAIN}.storage"
 DATA_REGISTRY = f"{DOMAIN}_storage"
-STORAGE_VERSION = 1
+STORAGE_VERSION = 2
 SAVE_DELAY = 10
 
 PLATFORMS = ["sensor", "switch", "button", "number"]
