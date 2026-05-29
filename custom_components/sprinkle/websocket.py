@@ -7,11 +7,11 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.http import HomeAssistantView
 from homeassistant.components.http.data_validator import RequestDataValidator
 from homeassistant.helpers import config_validation as cv
-from . import const, SprinkleSetupManager, try_get_setup_manager
+from .setup_manager import SprinkleSetupManager, try_get_setup_manager
 from .coordinator import SprinkleCoordinator, try_get_coordinator, try_get_coordinator_by_id
+from . import const
 import voluptuous as vol
 import logging
-from aiohttp.web import Request
 import attr
 from .store import SprinkleStorage
 
@@ -157,6 +157,7 @@ async def sprinkle_update_gs(hass: HomeAssistant, connection: websocket_api.Acti
 def register_websockets(hass: HomeAssistant):
     async_register_command(hass, handle_subscribe_updates)
     async_register_command(hass, sprinkle_log)
+    async_register_command(hass, sprinkle_get_entries)
     async_register_command(hass, sprinkle_get_zones)
     async_register_command(hass, sprinkle_get_cycles)
     async_register_command(hass, sprinkle_get_gs)

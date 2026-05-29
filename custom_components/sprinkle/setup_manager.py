@@ -6,7 +6,6 @@ from homeassistant.core import HomeAssistant
 
 from .coordinator import SprinkleCoordinator, try_get_coordinator
 from .panel import async_unregister_panel, async_register_panel
-from .websocket import register_websockets
 from .const import DOMAIN, PLATFORMS
 from .store import SprinkleStorage
 
@@ -35,6 +34,7 @@ class SprinkleSetupManager:
 
 
     async def async_setup(self, entry: ConfigEntry):
+        from .websocket import register_websockets
         coordinator = SprinkleCoordinator(self.hass, entry, self.store_obj)
         self.hass.data[DOMAIN]["config_entries"][entry.entry_id] = coordinator
         await self.hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
