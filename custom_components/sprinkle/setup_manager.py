@@ -23,6 +23,17 @@ class SprinkleSetupManager:
         self.hass = hass
         self.store_obj: SprinkleStorage = store
 
+    def get_registered_config_entries(self):
+        return_array = []
+        entry_set: dict[str, SprinkleCoordinator] = self.hass.data[DOMAIN]["config_entries"]
+        for coordinator in entry_set.values():
+            return_array.append({
+                "entry_id": coordinator.entry.entry_id,
+                "entry_name": coordinator.entry.title,
+            })
+        return return_array
+
+
     async def async_setup(self, entry: ConfigEntry):
         coordinator = SprinkleCoordinator(self.hass, entry, self.store_obj)
         self.hass.data[DOMAIN]["config_entries"][entry.entry_id] = coordinator

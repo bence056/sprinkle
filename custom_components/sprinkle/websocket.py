@@ -7,7 +7,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.http import HomeAssistantView
 from homeassistant.components.http.data_validator import RequestDataValidator
 from homeassistant.helpers import config_validation as cv
-from . import const
+from . import const, SprinkleSetupManager, try_get_setup_manager
 from .coordinator import SprinkleCoordinator, try_get_coordinator, try_get_coordinator_by_id
 import voluptuous as vol
 import logging
@@ -50,7 +50,15 @@ def handle_subscribe_updates(hass, connection: websocket_api.ActiveConnection, m
 def sprinkle_log(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
     _LOGGER.info("[Sprinkle log]: %s", msg["message"])
 
-
+@websocket_command(
+{
+    vol.Required("type"): "sprinkle/get_entries",
+})
+@async_response
+async def sprinkle_get_entries(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    manager: SprinkleSetupManager = try_get_setup_manager(hass)
+    response = manager.get_registered_config_entries()
+    connection.send_result(msg["id"],  response)
 
 @websocket_command(
 {
