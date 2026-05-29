@@ -62,6 +62,10 @@ export interface Schedule {
   cycleId: string;
 }
 
+export interface ConfigEntry {
+    entry_id: string,
+    entry_name: string
+}
 
 export interface Zone {
   zone_id: string;

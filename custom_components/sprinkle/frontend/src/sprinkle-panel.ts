@@ -1,10 +1,11 @@
 import {LitElement, html, css, PropertyValues} from 'lit';
 import {customElement, property, state, query} from 'lit/decorators.js';
-import {HomeAssistant, Cycle, Schedule} from './types';
+import {HomeAssistant, Cycle, Schedule, ConfigEntry} from './types';
 import {commonStyle} from "./style";
 import "./panels/zone-panel"
 import "./panels/cycle-panel"
 import "./panels/general-panel"
+import {getConfigEntries} from "./websockets";
 
 @customElement('sprinkle-panel')
 export class SprinklePanel extends LitElement {
@@ -12,6 +13,16 @@ export class SprinklePanel extends LitElement {
     @property({type: Boolean, reflect: true}) public narrow!: boolean;
 
     @state() tab: string = "setup"
+
+    @state() entries: ConfigEntry[] = []
+
+
+
+    async connectedCallback() {
+        //Get the config entry data.
+        this.entries = await getConfigEntries(this.hass)
+        console.log(this.entries)
+    }
 
     static styles = [
         commonStyle,
