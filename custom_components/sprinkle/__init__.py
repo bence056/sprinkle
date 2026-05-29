@@ -16,19 +16,21 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup(hass: HomeAssistant, config):
 
-    hass.data.setdefault(const.DOMAIN, {
-        "manager": None,
-        "config_entries": {},
-    })
 
-    store_obj = await async_get_registry(hass)
-    hass.data[const.DOMAIN]["manager"] = SprinkleSetupManager(hass, store_obj)
 
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
+    hass.data.setdefault(const.DOMAIN, {
+        "manager": None,
+        "config_entries": {},
+    })
+
+    if hass.data[const.DOMAIN]["manager"] is None:
+        store_obj = await async_get_registry(hass)
+        hass.data[const.DOMAIN]["manager"] = SprinkleSetupManager(hass, store_obj)
 
     # Create the controller device
     device_registry = async_get_device_registry(hass)
@@ -43,7 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     _LOGGER.info(f"Creating configuration entry for {entry.title}")
     # create the default controller entities after controller flow creation.
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
     await try_get_setup_manager(hass).async_setup(entry)
 
     return True
@@ -51,7 +53,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _LOGGER.info(f"Unloading configuration entry for {entry.title}")
     await try_get_setup_manager(hass).async_unload(entry)
-    await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     return True
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry):

@@ -7,10 +7,11 @@ from homeassistant.core import HomeAssistant
 from .coordinator import SprinkleCoordinator, try_get_coordinator
 from .panel import async_unregister_panel, async_register_panel
 from .websocket import register_websockets
-from .const import DOMAIN
+from .const import DOMAIN, PLATFORMS
 from .store import SprinkleStorage
 
 _LOGGER = logging.getLogger(__name__)
+
 
 def try_get_setup_manager(hass: HomeAssistant) -> SprinkleSetupManager:
     return hass.data[DOMAIN]["manager"]
@@ -24,9 +25,11 @@ class SprinkleSetupManager:
 
     async def async_setup(self, entry: ConfigEntry):
         coordinator = SprinkleCoordinator(self.hass, entry, self.store_obj)
-        await coordinator.async_setup()
-
         self.hass.data[DOMAIN]["config_entries"][entry.entry_id] = coordinator
+        coordinator.store.load_entry(entry)
+        await self.hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+        await coordinator.async_setup()
         is_first_entry = len(self.hass.data[DOMAIN]["config_entries"]) == 1
 
         if is_first_entry:
@@ -46,6 +49,7 @@ class SprinkleSetupManager:
         is_last_entry = len(self.hass.data[DOMAIN]["config_entries"]) == 0
         if is_last_entry:
             async_unregister_panel(self.hass)
+        await self.hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
     async def async_remove(self, entry: ConfigEntry):

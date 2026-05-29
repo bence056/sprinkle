@@ -17,7 +17,7 @@ from .const import DOMAIN, VERSION, CYCLE_RUNNING, CYCLE_IDLE
 from .number import ZoneRunDurationNumber, RainDelayDurationNumber
 from .sensor import ZoneStatusSensor, ZoneIrrigationFinishTime, RainDelayExpiry, CycleRemainingMinutes, \
     CycleStatusSensor
-from .store import SprinkleStorage, SprinkleZone, SprinkleCycleStep, SprinkleEntryWrapper
+from .store import SprinkleStorage, SprinkleZone, SprinkleCycleStep
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -289,8 +289,6 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         super().__init__(hass, _LOGGER, name=DOMAIN)
 
 
-    def entry_store(self) -> SprinkleEntryWrapper:
-        return self.store.entry(self.entry)
 
     async def async_setup(self):
 
@@ -496,7 +494,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
 
         # create zone coordinator. It will create the entities as well.
         self.zones[zone_id] = SprinkleZoneCoordinator(self.hass, self, zone_id, zone_name, zone_valves)
-        self.store.create_zone(data)
+        self.store.create_zone(self.entry, data)
 
 
 
@@ -513,7 +511,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         if device_id is not None:
             device_registry.async_remove_device(device_id)
             #remove from store.
-            self.store.remove_zone(zone_id)
+            self.store.remove_zone(self.entry, zone_id)
 
             #check if there are cycles that contain this zone.
             cycles_to_delete: list[str] = []
@@ -547,7 +545,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
 
     async def async_create_cycle(self, cycle_id: str, data: dict):
 
-        stored_cycle = self.store.create_or_modify_cycle(data)
+        stored_cycle = self.store.create_or_modify_cycle(self.entry, data)
         if cycle_id not in self.cycles.keys():
             #create the cycle coordinator and entities
             self.cycles[cycle_id] = SprinkleCycleCoordinator(self.hass, self, cycle_id, stored_cycle.cycle_name, stored_cycle.cycle_steps)
@@ -557,7 +555,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
     async def async_modify_cycle(self, cycle_id: str, data: dict):
         if cycle_id not in self.cycles.keys():
             return
-        edited_cycle = self.store.create_or_modify_cycle(data)
+        edited_cycle = self.store.create_or_modify_cycle(self.entry, data)
         #update coordinator data as well.
         self.cycles[cycle_id].update_cycle_steps(edited_cycle.cycle_steps)
 
@@ -568,7 +566,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         if device_id is not None:
             device_registry.async_remove_device(device_id)
             #remove from store.
-            self.store.remove_cycle(cycle_id)
+            self.store.remove_cycle(self.entry, cycle_id)
             #remove its assigned coordinator as well.
             if cycle_id in self.cycles.keys():
                 #stop any currently running cycle action

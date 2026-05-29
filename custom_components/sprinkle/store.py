@@ -199,10 +199,16 @@ class SprinkleStorage:
         self.save_key += 1
         store_data = {"save_key": self.save_key,
                       "entries": {
-                          entry_id: attr.asdict(entry_data.async_parse_save()) for entry_id, entry_data in self.entries
+                          entry_id: entry_data.async_parse_save() for entry_id, entry_data in self.entries.items()
                       }
                       }
         return store_data
+
+    def load_entry(self, entry: ConfigEntry) -> SprinkleEntryStorage:
+        if not entry.entry_id in self.entries:
+            self.entries[entry.entry_id] = SprinkleEntryStorage(self.hass, entry.entry_id, self)
+            self.async_queue_save()
+        return self.entries[entry.entry_id]
 
     def entry(self, config_entry: ConfigEntry) -> SprinkleEntryStorage:
         return self.entries[config_entry.entry_id]
