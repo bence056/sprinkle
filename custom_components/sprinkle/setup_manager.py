@@ -35,6 +35,7 @@ class SprinkleSetupManager:
 
     async def async_setup(self, entry: ConfigEntry):
         from .websocket import register_websockets
+        _LOGGER.error(f"Setting up coordinator for {entry.entry_id}")
         coordinator = SprinkleCoordinator(self.hass, entry, self.store_obj)
         self.hass.data[DOMAIN]["config_entries"][entry.entry_id] = coordinator
         await self.hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -74,4 +75,4 @@ class SprinkleSetupManager:
             await self.store_obj.async_delete()
         else:
             #We only need to remove the stored data for this config entry.
-            pass
+            self.store_obj.remove_entry(entry)

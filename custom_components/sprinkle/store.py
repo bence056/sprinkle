@@ -210,6 +210,11 @@ class SprinkleStorage:
             self.async_queue_save()
         return self.entries[entry.entry_id]
 
+    def remove_entry(self, entry: ConfigEntry):
+        if entry.entry_id in self.entries:
+            del self.entries[entry.entry_id]
+            self.async_queue_save()
+
     def entry(self, config_entry: ConfigEntry) -> SprinkleEntryStorage:
         return self.entries[config_entry.entry_id]
 
@@ -218,7 +223,7 @@ class SprinkleStorage:
 
 
     def remove_zone(self, entry: ConfigEntry, zone_id: str) -> bool:
-        return self.entry(entry).remove_cycle(zone_id)
+        return self.entry(entry).remove_zone(zone_id)
 
     def create_or_modify_cycle(self, entry: ConfigEntry, data: dict) -> SprinkleCycle:
        return self.entry(entry).create_or_modify_cycle(data)
