@@ -26,7 +26,7 @@ class SprinkleZoneCoordinator:
 
         self.hass = hass
         self.coordinator: SprinkleCoordinator = main_coordinator
-        self.zone_id = zone_id
+        self.zone_id = f"{self.coordinator.entry_id_lowercase()}_{zone_id}"
         self.zone_name = zone_name
         self.zone_valves = zone_valves
         self.controlling_cycle = None
@@ -149,7 +149,7 @@ class SprinkleZoneCoordinator:
 
     def build_zone_device_info(self):
         return {
-            "identifiers": {(DOMAIN, self.zone_id)},
+            "identifiers": {(DOMAIN, self.zone_id, self.coordinator.entry.entry_id)},
             "name": self.zone_name,
             "manufacturer": "bence056",
             "model": "Sprinkle Zone",
@@ -160,7 +160,7 @@ class SprinkleCycleCoordinator:
     def __init__(self, hass, main_coordinator, cycle_id, cycle_name, cycle_steps: list[SprinkleCycleStep]):
         self.hass = hass
         self.coordinator: SprinkleCoordinator = main_coordinator
-        self.cycle_id = cycle_id
+        self.cycle_id = f"{self.coordinator.entry_id_lowercase()}_{cycle_id}"
         self.cycle_name = cycle_name
         self.cycle_steps: list[SprinkleCycleStep] = []
         self.current_step_index = -1
@@ -263,7 +263,7 @@ class SprinkleCycleCoordinator:
 
     def build_cycle_device_info(self):
         return {
-            "identifiers": {(DOMAIN, self.cycle_id)},
+            "identifiers": {(DOMAIN, self.cycle_id, self.coordinator.entry.entry_id)},
             "name": self.cycle_name,
             "manufacturer": "bence056",
             "model": "Sprinkle Cycle",
@@ -295,8 +295,8 @@ class SprinkleCoordinator(DataUpdateCoordinator):
 
 
         device_info = {
-            "identifiers": {(DOMAIN, self.entry.unique_id)},
-            "name": const.NAME,
+            "identifiers": {(DOMAIN, self.entry.entry_id)},
+            "name": "Irrigation Controller",
             "model": const.NAME,
             "sw_version": const.VERSION,
             "manufacturer": const.MANUFACTURER
@@ -600,6 +600,9 @@ class SprinkleCoordinator(DataUpdateCoordinator):
     async def async_stop_active_zone(self):
         if self.active_zone is not None:
             await self.active_zone.async_stop_run()
+
+    def entry_id_lowercase(self):
+        return self.entry.entry_id.lower()
 
 def try_get_coordinator(hass: HomeAssistant, entry: ConfigEntry) -> SprinkleCoordinator:
     entry_obj = hass.data[const.DOMAIN]["config_entries"][entry.entry_id]

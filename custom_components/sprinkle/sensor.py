@@ -90,7 +90,7 @@ class ZoneIrrigationFinishTime(SensorEntity):
 
 class RainDelayExpiry(SensorEntity):
     def __init__(self, device_info, coordinator):
-        self._attr_unique_id = f"{DOMAIN}_rain_delay_expiry"
+        self._attr_unique_id = f"{DOMAIN}_{coordinator.entry_id_lowercase()}_rain_delay_expiry"
         self._attr_name = f"Rain Delay Expiry"
         self._attr_device_info = device_info
         self._coordinator = coordinator

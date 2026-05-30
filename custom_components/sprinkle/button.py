@@ -48,7 +48,7 @@ class ZoneStartRunButton(ButtonEntity):
 
 class RainDelaySetterButton(ButtonEntity):
     def __init__(self, device_info, coordinator):
-        self._attr_unique_id = f"{DOMAIN}_activate_rain_delay"
+        self._attr_unique_id = f"{DOMAIN}_{coordinator.entry_id_lowercase()}_activate_rain_delay"
         self._attr_name = f"Activate Rain Delay"
         self._attr_device_info = device_info
         self._coordinator = coordinator
