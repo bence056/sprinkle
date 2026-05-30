@@ -1,4 +1,5 @@
 import {HomeAssistant} from "./types";
+import {SprinklePanel} from "./sprinkle-panel";
 
     export function getValveEntities(hass: HomeAssistant): string[] {
     return Object.keys(hass.states).filter(eid => eid.startsWith('valve.'));

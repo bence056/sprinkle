@@ -1,6 +1,6 @@
 import {LitElement, html, css, CSSResultGroup} from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
-import { HomeAssistant, Zone } from '../types';
+import {customElement, property, state} from 'lit/decorators.js';
+import {HomeAssistant, Zone} from '../types';
 import {getValveName, getValveEntities, getValveIcon, createSimpleUUID} from "../helpers";
 import {commonStyle} from "../style";
 import {SubscribeMixin} from "../subscribe-mixin";
@@ -10,8 +10,8 @@ import {createZone, deleteZone as apiDeleteZone, getGeneralSettings, getZones, m
 @customElement('zone-panel')
 export class ZonePanel extends SubscribeMixin(LitElement) {
 
-    @property({ attribute: false }) hass!: HomeAssistant;
-    @property({ type: Boolean, reflect: true }) public narrow!: boolean;
+    @property({attribute: false}) hass!: HomeAssistant;
+    @property({type: Boolean, reflect: true}) public narrow!: boolean;
 
     @state() private zones: Zone[] = [];
     @state() private master_valve: string = ""
@@ -23,15 +23,15 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
 
     protected hassSubscribe(): Array<UnsubscribeFunc | Promise<UnsubscribeFunc>> {
         this.fetchData();
-        return [this.hass.connection.subscribeMessage(()=> this.fetchData(), {type: "sprinkle_update_listen"})]
+        return [this.hass.connection.subscribeMessage(() => this.fetchData(), {type: "sprinkle_update_listen"})]
     }
 
     private async fetchData() {
-        if(!this.hass) return;
+        if (!this.hass) return;
 
-           this.zones = await getZones(this.hass);
-           this.master_valve = (await getGeneralSettings(this.hass)).master_valve_entity_id;
-           this.requestUpdate();
+        this.zones = await getZones(this.hass);
+        this.master_valve = (await getGeneralSettings(this.hass)).master_valve_entity_id;
+        this.requestUpdate();
 
     }
 
@@ -71,7 +71,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
     private openZoneDialog(zone: Zone | null) {
         this.editingZone = zone;
         this.zoneNameInput = zone?.zone_name || '';
-        if(zone) this.zoneDialogModifyOnly = true
+        if (zone) this.zoneDialogModifyOnly = true
         this.selectedValves = new Set(zone?.zone_valves || []);
         this.zoneDialogOpen = true;
     }
@@ -98,16 +98,16 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
         if (!name || this.selectedValves.size === 0) return;
         if (!this.editingZone && this.zones.some(z => z.zone_name.toLowerCase() === name.toLowerCase())) return;
 
-        if(this.zoneDialogModifyOnly && this.editingZone) {
+        if (this.zoneDialogModifyOnly && this.editingZone) {
             modifyZoneValves(this.hass, this.editingZone.zone_id, Array.from(this.selectedValves)).then(() => {
                 console.log("API call finished");
             });
-        }else {
+        } else {
             const newZone: Zone = {
-            zone_id: this.editingZone?.zone_id || `zone-${createSimpleUUID()}`,
-            zone_name: name,
-            zone_valves: Array.from(this.selectedValves),
-        };
+                zone_id: this.editingZone?.zone_id || `zone-${createSimpleUUID()}`,
+                zone_name: name,
+                zone_valves: Array.from(this.selectedValves),
+            };
             createZone(this.hass, newZone).then(() => {
                 console.log("API call finished");
             });
@@ -118,43 +118,80 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
 
     private deleteZone = (id: string) => {
         this.zones = this.zones.filter(z => z.zone_id !== id);
-        apiDeleteZone(this.hass, id).then(()=> {
+        apiDeleteZone(this.hass, id).then(() => {
             console.log("API call finished");
         });
     };
 
+    @state() private selectedZoneTab = "general";
+
+    private zoneDialogGeneral() {
+
+    }
+
+    private renderZoneDialogInner() {
+        if (this.selectedZoneTab == "general") {
+            return html`
+                <ha-input
+                        label="Zone Name"
+                        .value=${this.zoneNameInput}
+                        @input=${(e: Event) => this.zoneNameInput = (e.target as HTMLInputElement).value}
+                        ?disabled=${this.zoneDialogModifyOnly}
+                ></ha-input>
+                <div class="valve-checkboxes">
+                    ${getValveEntities(this.hass).filter((a) => a != this.master_valve)
+                            .sort((a, b) =>
+                                    getValveName(this.hass, a).localeCompare(getValveName(this.hass, b)))
+                            .map(id => html`
+                                <label class="valve-select-row">
+                                    <ha-checkbox
+                                            .checked=${this.selectedValves.has(id)}
+                                            @change=${(e: Event) => this.toggleValve(id, (e.target as HTMLInputElement).checked)}
+                                    ></ha-checkbox>
+                                    ${getValveName(this.hass, id)}
+                                    <ha-icon icon=${getValveIcon(this.hass, id)}></ha-icon>
+                                </label>
+                            `)}
+                </div>
+            `;
+        } else if (this.selectedZoneTab == "advanced") {
+            return html`
+                
+                <div class="advanced-settings">
+                    WIP
+                </div>
+
+                
+
+
+            `
+        }
+        return null;
+    }
+
     private renderZoneDialog() {
         if (!this.zoneDialogOpen) return null;
         return html`
-            <ha-dialog open header-title="${this.editingZone ? 'Modify Zone' : 'Add Zone'}" @closed=${this.closeZoneDialog}>
+            <ha-dialog open header-title="${this.editingZone ? 'Modify Zone' : 'Add Zone'}"
+                       @closed=${this.closeZoneDialog}>
                 <div>
-                    <ha-input
-                            label="Zone Name"
-                            .value=${this.zoneNameInput}
-                            @input=${(e: Event) => this.zoneNameInput = (e.target as HTMLInputElement).value}
-                            ?disabled=${this.zoneDialogModifyOnly}
-                    ></ha-input>
-                    <div class="valve-checkboxes">
-                        ${getValveEntities(this.hass).filter((a) => a != this.master_valve)
-                                .sort((a,b) => 
-                                getValveName(this.hass, a).localeCompare(getValveName(this.hass, b)))
-                                .map(id => html`
-                            <label class="valve-select-row">
-                                <ha-checkbox
-                                        .checked=${this.selectedValves.has(id)}
-                                        @change=${(e: Event) => this.toggleValve(id, (e.target as HTMLInputElement).checked)}
-                                ></ha-checkbox>
-                                ${getValveName(this.hass, id)}
-                                <ha-icon icon=${getValveIcon(this.hass, id)}></ha-icon>
-                            </label>
-                        `)}
+                    <div class="header">
+                        <div class="tabs">
+                            <ha-tab-group @wa-tab-show=${(e) => this.selectedZoneTab = e.detail.name}>
+                                <ha-tab-group-tab active panel="general">General</ha-tab-group-tab>
+                                <ha-tab-group-tab panel="advanced">Advanced</ha-tab-group-tab>
+                            </ha-tab-group>
+                        </div>
                     </div>
+                    ${this.renderZoneDialogInner()}
                 </div>
                 <ha-dialog-footer slot="footer">
-                <ha-button slot="primaryAction" dialogAction="save"
-                           @click=${this.saveZone}
-                           .disabled=${this.zoneNameInput == "" || this.selectedValves.size <= 0}>Save</ha-button>
-                <ha-button slot="secondaryAction" dialogAction="cancel" @click=${this.closeZoneDialog}>Cancel</ha-button>
+                    <ha-button slot="primaryAction" dialogAction="save"
+                               @click=${this.saveZone}
+                               .disabled=${this.zoneNameInput == "" || this.selectedValves.size <= 0}>Save
+                    </ha-button>
+                    <ha-button slot="secondaryAction" dialogAction="cancel" @click=${this.closeZoneDialog}>Cancel
+                    </ha-button>
                 </ha-dialog-footer>
             </ha-dialog>
         `;
