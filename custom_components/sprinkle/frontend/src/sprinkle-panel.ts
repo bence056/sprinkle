@@ -20,8 +20,13 @@ export class SprinklePanel extends LitElement {
     connectedCallback() {
         super.connectedCallback()
         //Get the config entry data.
-        ConfigHandler.instance.registerHandler(this.hass, () => this.requestUpdate()).then(() => {
+        ConfigHandler.instance.registerHass(this.hass).then(() => {
             this.config_ready = true;
+        });
+        ConfigHandler.instance.subscribeToEntryChange((newEntry) => {
+            this.config_ready = newEntry != undefined;
+            //request update to update the selector and the menubar.
+            this.requestUpdate();
         });
     }
 

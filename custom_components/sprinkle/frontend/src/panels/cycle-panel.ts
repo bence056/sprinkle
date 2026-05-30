@@ -6,6 +6,7 @@ import { SubscribeMixin } from "../subscribe-mixin";
 import { UnsubscribeFunc } from "home-assistant-js-websocket";
 import { getCycles, getZones, createCycle, modifyCycle, deleteCycle } from "../websockets";
 import { getValveName, createSimpleUUID } from "../helpers";
+import {ConfigHandler} from "../config-handler";
 
 @customElement('cycle-panel')
 export class CyclePanel extends SubscribeMixin(LitElement) {
@@ -23,6 +24,7 @@ export class CyclePanel extends SubscribeMixin(LitElement) {
 
     protected hassSubscribe(): Array<UnsubscribeFunc | Promise<UnsubscribeFunc>> {
         this.fetchData();
+        ConfigHandler.instance.subscribeToEntryChange(()=> this.fetchData());
         return [this.hass.connection.subscribeMessage(() => this.fetchData(), { type: "sprinkle_update_listen" })];
     }
 

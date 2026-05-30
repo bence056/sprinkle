@@ -6,6 +6,7 @@ import {commonStyle} from "../style";
 import {SubscribeMixin} from "../subscribe-mixin";
 import {UnsubscribeFunc} from "home-assistant-js-websocket";
 import {createZone, deleteZone as apiDeleteZone, getGeneralSettings, getZones, modifyZoneValves} from '../websockets'
+import {ConfigHandler} from "../config-handler";
 
 @customElement('zone-panel')
 export class ZonePanel extends SubscribeMixin(LitElement) {
@@ -23,6 +24,7 @@ export class ZonePanel extends SubscribeMixin(LitElement) {
 
     protected hassSubscribe(): Array<UnsubscribeFunc | Promise<UnsubscribeFunc>> {
         this.fetchData();
+        ConfigHandler.instance.subscribeToEntryChange(()=> this.fetchData());
         return [this.hass.connection.subscribeMessage(() => this.fetchData(), {type: "sprinkle_update_listen"})]
     }
 
