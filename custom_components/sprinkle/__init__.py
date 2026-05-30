@@ -32,17 +32,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         store_obj = await async_get_registry(hass)
         hass.data[const.DOMAIN]["manager"] = SprinkleSetupManager(hass, store_obj)
 
-    # Create the controller device
-    device_registry = async_get_device_registry(hass)
-    # device = device_registry.async_get_or_create(
-    #     config_entry_id=entry.entry_id,
-    #     identifiers={(DOMAIN, entry.unique_id)},
-    #     name="Irrigation Controller",
-    #     model="Irrigation Controller",
-    #     sw_version=const.VERSION,
-    #     manufacturer=const.MANUFACTURER,
-    # )
-
     _LOGGER.info(f"Creating configuration entry for {entry.title}")
     # create the default controller entities after controller flow creation.
 

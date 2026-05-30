@@ -35,6 +35,7 @@ class SprinkleSetupManager:
 
     async def async_setup(self, entry: ConfigEntry):
         from .websocket import register_websockets
+        entry.runtime_data = {}
         _LOGGER.error(f"Setting up coordinator for {entry.entry_id}")
         coordinator = SprinkleCoordinator(self.hass, entry, self.store_obj)
         self.hass.data[DOMAIN]["config_entries"][entry.entry_id] = coordinator

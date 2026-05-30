@@ -11,8 +11,7 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
 
     #save the callback to the dataset for later use.
-    hass.data[DOMAIN]["add_button_entity"] = async_add_entities
-    _LOGGER.info("added to hass.data")
+    entry.runtime_data["add_button_entity"] = async_add_entities
 
 
 

@@ -32,9 +32,9 @@ class SprinkleZoneCoordinator:
         self.controlling_cycle = None
         self.zone_running = False
 
-        async_add_buttons = self.hass.data[DOMAIN]["add_button_entity"]
-        async_add_sensors = self.hass.data[DOMAIN]["add_sensor_entity"]
-        async_add_numbers = self.hass.data[DOMAIN]["add_number_entity"]
+        async_add_buttons = self.coordinator.entry.runtime_data["add_button_entity"]
+        async_add_sensors = self.coordinator.entry.runtime_data["add_sensor_entity"]
+        async_add_numbers = self.coordinator.entry.runtime_data["add_number_entity"]
 
         device_info = self.build_zone_device_info()
 
@@ -149,7 +149,7 @@ class SprinkleZoneCoordinator:
 
     def build_zone_device_info(self):
         return {
-            "identifiers": {(DOMAIN, self.zone_id, self.coordinator.entry.entry_id)},
+            "identifiers": {(DOMAIN, f"{self.coordinator.entry.entry_id}:{self.zone_id}")},
             "name": self.zone_name,
             "manufacturer": "bence056",
             "model": "Sprinkle Zone",
@@ -171,8 +171,8 @@ class SprinkleCycleCoordinator:
         self.cycle_run_entity = CycleStartRunButton(cycle_id, cycle_name, device_info, self)
         self.cycle_end_timestamp_entity = CycleRemainingMinutes(cycle_id, cycle_name, device_info, self)
 
-        async_add_buttons = self.hass.data[DOMAIN]["add_button_entity"]
-        async_add_sensors = self.hass.data[DOMAIN]["add_sensor_entity"]
+        async_add_buttons = self.coordinator.entry.runtime_data["add_button_entity"]
+        async_add_sensors = self.coordinator.entry.runtime_data["add_sensor_entity"]
         async_add_buttons([self.cycle_run_entity])
         async_add_sensors([self.cycle_end_timestamp_entity, self.cycle_status_entity])
 
@@ -263,7 +263,7 @@ class SprinkleCycleCoordinator:
 
     def build_cycle_device_info(self):
         return {
-            "identifiers": {(DOMAIN, self.cycle_id, self.coordinator.entry.entry_id)},
+            "identifiers": {(DOMAIN, f"{self.coordinator.entry.entry_id}:{self.cycle_id}")},
             "name": self.cycle_name,
             "manufacturer": "bence056",
             "model": "Sprinkle Cycle",
@@ -302,9 +302,9 @@ class SprinkleCoordinator(DataUpdateCoordinator):
             "manufacturer": const.MANUFACTURER
         }
 
-        async_add_buttons = self.hass.data[DOMAIN]["add_button_entity"]
-        async_add_sensors = self.hass.data[DOMAIN]["add_sensor_entity"]
-        async_add_numbers = self.hass.data[DOMAIN]["add_number_entity"]
+        async_add_buttons = self.entry.runtime_data["add_button_entity"]
+        async_add_sensors = self.entry.runtime_data["add_sensor_entity"]
+        async_add_numbers = self.entry.runtime_data["add_number_entity"]
 
 
         self.rain_delay_number_entity = RainDelayDurationNumber(device_info, self)
