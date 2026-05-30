@@ -1,6 +1,12 @@
 import {ConfigEntry, Cycle, GeneralSettings, HomeAssistant, Zone} from "./types";
 
-export const createZone = (hass: HomeAssistant, config_entry: string, zone: Partial<Zone>) : Promise<boolean> => {
+let getCurrentRoom: (() => string) | undefined
+
+export function configureWebsocketEntry(getter: ()=> string) {
+    getCurrentRoom = getter;
+}
+
+export const createZone = (hass: HomeAssistant, zone: Partial<Zone>, config_entry: string = getCurrentRoom?.() || "") : Promise<boolean> => {
     return hass.callWS({
         type: "sprinkle/zone",
         entry: config_entry,
@@ -8,7 +14,7 @@ export const createZone = (hass: HomeAssistant, config_entry: string, zone: Part
     })
 }
 
-export const modifyZoneValves = (hass: HomeAssistant, config_entry: string, zone_id: string, valve_list: string[]) : Promise<boolean> => {
+export const modifyZoneValves = (hass: HomeAssistant, zone_id: string, valve_list: string[], config_entry: string = getCurrentRoom?.() || "") : Promise<boolean> => {
     return hass.callWS({
         type: "sprinkle/zone",
         entry: config_entry,
@@ -20,7 +26,7 @@ export const modifyZoneValves = (hass: HomeAssistant, config_entry: string, zone
     })
 }
 
-export const deleteZone = (hass: HomeAssistant, config_entry: string, zone_id: string) : Promise<boolean> => {
+export const deleteZone = (hass: HomeAssistant, zone_id: string, config_entry: string = getCurrentRoom?.() || "") : Promise<boolean> => {
     return hass.callWS({
         type: "sprinkle/zone",
         entry: config_entry,
@@ -31,14 +37,14 @@ export const deleteZone = (hass: HomeAssistant, config_entry: string, zone_id: s
     })
 }
 
-export const getZones = (hass: HomeAssistant, config_entry: string,) : Promise<Zone[]> => {
+export const getZones = (hass: HomeAssistant, config_entry: string = getCurrentRoom?.() || "") : Promise<Zone[]> => {
     return hass.callWS({
         type: "sprinkle/get_zones",
         entry: config_entry
     })
 }
 
-export const createCycle = (hass: HomeAssistant, config_entry: string, cycle: Partial<Cycle>) : Promise<boolean> => {
+export const createCycle = (hass: HomeAssistant, cycle: Partial<Cycle>, config_entry: string = getCurrentRoom?.() || "") : Promise<boolean> => {
     return hass.callWS({
         type: "sprinkle/cycle",
         entry: config_entry,
@@ -46,7 +52,7 @@ export const createCycle = (hass: HomeAssistant, config_entry: string, cycle: Pa
     })
 }
 
-export const modifyCycle = (hass: HomeAssistant, config_entry: string, cycle: Partial<Cycle>) : Promise<boolean> => {
+export const modifyCycle = (hass: HomeAssistant, cycle: Partial<Cycle>, config_entry: string = getCurrentRoom?.() || "") : Promise<boolean> => {
     return hass.callWS({
         type: "sprinkle/cycle",
         entry: config_entry,
@@ -54,7 +60,7 @@ export const modifyCycle = (hass: HomeAssistant, config_entry: string, cycle: Pa
     })
 }
 
-export const deleteCycle = (hass: HomeAssistant, config_entry: string, cycle_id: string) : Promise<boolean> => {
+export const deleteCycle = (hass: HomeAssistant, cycle_id: string, config_entry: string = getCurrentRoom?.() || "") : Promise<boolean> => {
     return hass.callWS({
         type: "sprinkle/cycle",
         entry: config_entry,
@@ -65,14 +71,14 @@ export const deleteCycle = (hass: HomeAssistant, config_entry: string, cycle_id:
     })
 }
 
-export const getCycles = (hass: HomeAssistant, config_entry: string) : Promise<Cycle[]> => {
+export const getCycles = (hass: HomeAssistant, config_entry: string = getCurrentRoom?.() || "") : Promise<Cycle[]> => {
     return hass.callWS({
         type: "sprinkle/get_cycles",
         entry: config_entry
     })
 }
 
-export const getGeneralSettings = (hass: HomeAssistant, config_entry: string,) : Promise<GeneralSettings> => {
+export const getGeneralSettings = (hass: HomeAssistant, config_entry: string = getCurrentRoom?.() || "") : Promise<GeneralSettings> => {
     return hass.callWS({
         type: "sprinkle/get_gs",
         entry: config_entry
@@ -86,7 +92,7 @@ export const getConfigEntries = (hass: HomeAssistant) : Promise<ConfigEntry[]> =
 }
 
 
-export const updateGeneralSettings = (hass: HomeAssistant, config_entry: string, settingsObject: Partial<GeneralSettings>) : Promise<boolean> => {
+export const updateGeneralSettings = (hass: HomeAssistant, settingsObject: Partial<GeneralSettings>, config_entry: string = getCurrentRoom?.() || "") : Promise<boolean> => {
     return hass.callWS({
         type: "sprinkle/gs",
         entry: config_entry,

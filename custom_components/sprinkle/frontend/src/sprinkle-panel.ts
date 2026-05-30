@@ -6,6 +6,8 @@ import "./panels/zone-panel"
 import "./panels/cycle-panel"
 import "./panels/general-panel"
 import {getConfigEntries} from "./websockets";
+import {ConfigHandler} from "./config-handler";
+import {config} from "home-assistant-js-websocket/dist/messages";
 
 @customElement('sprinkle-panel')
 export class SprinklePanel extends LitElement {
@@ -13,15 +15,14 @@ export class SprinklePanel extends LitElement {
     @property({type: Boolean, reflect: true}) public narrow!: boolean;
 
     @state() tab: string = "setup"
+    @state() private config_ready: boolean = false;
 
-    @state() entries: ConfigEntry[] = []
-
-
-
-    async connectedCallback() {
+    connectedCallback() {
+        super.connectedCallback()
         //Get the config entry data.
-        this.entries = await getConfigEntries(this.hass)
-        console.log(this.entries)
+        ConfigHandler.instance.registerHandler(this.hass, () => this.requestUpdate()).then(() => {
+            this.config_ready = true;
+        });
     }
 
     static styles = [
@@ -52,9 +53,9 @@ export class SprinklePanel extends LitElement {
             }
 
             @media (max-width: 600px) {
-                
+
                 .header {
-                    
+
                 }
 
             }
@@ -65,21 +66,23 @@ export class SprinklePanel extends LitElement {
 
         if (this.tab == "setup") {
             return html`
-                
-            `
-            /*
-
-            <general-panel .hass=${this.hass} .narrow=${this.narrow}></general-panel>
+                <general-panel .hass=${this.hass} .narrow=${this.narrow}></general-panel>
                 <zone-panel .hass=${this.hass} .narrow=${this.narrow}></zone-panel>
                 <cycle-panel .hass=${this.hass} .narrow=${this.narrow}></cycle-panel>
-             */
+            `
 
         }
         return null;
     }
 
     render() {
-        console.log(this.narrow);
+
+        if (!this.config_ready) {
+            return html`
+                Loading...`
+        }
+
+
         return html`
 
             <div class="header">
@@ -91,16 +94,27 @@ export class SprinklePanel extends LitElement {
                         <ha-tab-group-tab panel="schedule">Scheduling</ha-tab-group-tab>
                 </div>
 
-            <div class="config-selector">
-                <ha-dropdown class="button">
-                    <ha-button slot="trigger" with-caret>Name</ha-button>
+                <div class="config-selector">
+                    <ha-dropdown class="button" @wa-select=${(e: CustomEvent)=> ConfigHandler.instance.selectEntry(e.detail.item.value)}>
+                        <ha-button slot="trigger" with-caret>${ConfigHandler.instance.active_entry_name}</ha-button>
 
-                    <ha-dropdown-item>
-                        <ha-icon icon="mdi:timer-marker-outline"></ha-icon>
-                        Cut
-                    </ha-dropdown-item>
-                    <ha-dropdown>
-            </div>
+                        ${ConfigHandler.instance.entries.map(entry => {
+
+                            return html`
+
+                                <ha-dropdown-item value=${entry.entry_id}>
+                                    <ha-icon
+                                            icon=${ConfigHandler.instance.active_entry_id == entry.entry_id ? "mdi:circle-slice-8" : "mdi:circle-outline"}></ha-icon>
+                                    ${entry.entry_name}
+                                </ha-dropdown-item>
+
+                            `
+
+                        })}
+
+
+                        <ha-dropdown>
+                </div>
             </div>
 
             ${this.renderTabs()}
