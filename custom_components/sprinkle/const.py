@@ -1,6 +1,6 @@
 DOMAIN = "sprinkle"
 NAME = "Sprinkle Virtual Irrigation"
-VERSION = "1.2.1"
+VERSION = "1.3.0"
 MANUFACTURER = "bence056"
 
 CUSTOM_COMPONENTS = "custom_components"
