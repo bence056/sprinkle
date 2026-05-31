@@ -21,6 +21,7 @@ class IrrigationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required("select_mode", default="virtual"):
                 selector({
                     "select": {
+                        "translation_key": "select_instance_mode",
                         "options": ["virtual", "hardware"]
                     }
                 })

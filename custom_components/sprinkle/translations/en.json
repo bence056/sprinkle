@@ -1,0 +1,28 @@
+{
+  "config": {
+    "step": {
+      "mode": {
+        "data": {
+          "select_mode": "Select your install solution"
+        }
+      },
+      "virtual_create": {
+        "title": "Name your virtual instance",
+        "data": {
+          "instance_name": "Virtual Instance Name"
+        }
+      }
+    },
+    "abort": {
+      "wip": "This feature is still work-in-progress."
+    }
+  },
+  "selector": {
+    "select_instance_mode": {
+      "options": {
+        "virtual": "Create a virtual irrigation instance",
+        "hardware": "Use Sprinkle hardware"
+      }
+    }
+  }
+}
