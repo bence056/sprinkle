@@ -4,7 +4,7 @@ import logging
 
 from .setup_manager import SprinkleSetupManager, try_get_setup_manager
 from .websocket import register_websockets
-from .store import async_get_registry
+from .store import async_get_registry, SprinkleStorage
 from .coordinator import SprinkleCoordinator, try_get_coordinator
 
 from .const import DOMAIN, PLATFORMS
@@ -14,9 +14,13 @@ from homeassistant.helpers.device_registry import async_get as async_get_device_
 
 _LOGGER = logging.getLogger(__name__)
 
+store_obj: SprinkleStorage
+
 async def async_setup(hass: HomeAssistant, config):
 
-
+    #get the store object once, globally.
+    global store_obj
+    store_obj = await async_get_registry(hass)
 
     return True
 
@@ -29,8 +33,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     })
 
     if hass.data[const.DOMAIN]["manager"] is None:
-        store_obj = await async_get_registry(hass)
+        _LOGGER.error("CREATING MANAGER")
         hass.data[const.DOMAIN]["manager"] = SprinkleSetupManager(hass, store_obj)
+
 
     _LOGGER.info(f"Creating configuration entry for {entry.title}")
     # create the default controller entities after controller flow creation.
