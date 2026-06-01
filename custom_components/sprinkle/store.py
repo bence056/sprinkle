@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 from typing import List, cast, MutableMapping
 
@@ -7,9 +8,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt
+
 from . import const
 from .const import STORAGE_KEY, STORAGE_VERSION, DATA_REGISTRY, SAVE_DELAY
 
+_LOGGER = logging.getLogger(__name__)
 
 @attr.s(slots=True, frozen=False)
 class SprinkleConfig:
@@ -146,6 +149,43 @@ class SprinkleEntryStorage:
         return False
 
 
+class SprinkleStore(Store):
+
+
+    async def _async_migrate_func(self, old_major_version, old_minor_version, old_data):
+        if old_major_version < 2:
+            #Migrate the data from ver1 to ver 2
+
+            new_data_entry = {}
+
+            if old_data is not None:
+                _LOGGER.debug(f"Migrating - old data: {old_data}")
+                if "config" in old_data:
+                    new_data_entry["config"] = old_data["config"]
+
+                if "settings" in old_data:
+                    new_data_entry["settings"] = old_data["settings"]
+
+                if "zones" in old_data:
+                    new_data_entry["zones"] = old_data["zones"]
+
+                if "cycles" in old_data:
+                    new_data_entry["cycles"] = old_data["cycles"]
+
+                del old_data["config"]
+                del old_data["settings"]
+                del old_data["zones"]
+                del old_data["cycles"]
+
+                sprinkle_entries = self.hass.config_entries.async_entries(const.DOMAIN)
+                if sprinkle_entries is not None:
+                    old_data["entries"] = {
+                        sprinkle_entries[0].entry_id: new_data_entry
+                    }
+
+            _LOGGER.debug(f"Migrating - new data: {old_data}")
+            old_major_version = old_major_version + 1
+        return old_data
 
 
 class SprinkleStorage:
@@ -153,7 +193,7 @@ class SprinkleStorage:
 
     def __init__(self, hass: HomeAssistant) -> None:
         self.hass = hass
-        self._store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
+        self._store = SprinkleStore(hass, STORAGE_VERSION, STORAGE_KEY)
         self.entries: dict[str, SprinkleEntryStorage] = {}
         self.save_key: int = -1
 
