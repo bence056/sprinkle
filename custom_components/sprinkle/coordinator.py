@@ -308,7 +308,7 @@ class SprinkleCoordinator(DataUpdateCoordinator):
         async_add_sensors = self.entry.runtime_data["add_sensor_entity"]
         async_add_numbers = self.entry.runtime_data["add_number_entity"]
 
-
+        _LOGGER.error(f"Creating entities and device in coordinator for {self.entry_id_lowercase()}")
         self.rain_delay_number_entity = RainDelayDurationNumber(device_info, self)
         self.rain_delay_expiry_entity = RainDelayExpiry(device_info, self)
         self.rain_delay_setter_entity = RainDelaySetterButton(device_info, self)

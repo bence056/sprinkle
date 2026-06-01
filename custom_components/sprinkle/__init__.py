@@ -2,7 +2,6 @@ from homeassistant.components.device_tracker import config_entry
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
 import logging
-
 from .setup_manager import SprinkleSetupManager, try_get_setup_manager
 from .websocket import register_websockets
 from .store import async_get_registry, SprinkleStorage
@@ -10,9 +9,7 @@ from .coordinator import SprinkleCoordinator, try_get_coordinator
 
 from .const import DOMAIN, PLATFORMS
 
-from homeassistant.helpers.device_registry import async_get as async_get_device_registry
-
-
+from homeassistant.helpers.device_registry import async_get as async_get_device_registry, DeviceRegistry, DeviceEntry
 _LOGGER = logging.getLogger(__name__)
 
 store_obj: SprinkleStorage
@@ -61,6 +58,16 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
         # This means the user has downgraded from a future version
         return False
     if entry.version == 1:
+
+        #Not the cleanest solution, but we will just delete the old devices with the old identifier.
+        dev_reg: DeviceRegistry =  async_get_device_registry(hass)
+        remove_ids: list[str] = []
+        for device in dev_reg.devices.values():
+            if entry.entry_id in device.config_entries:
+                remove_ids.append(device.id)
+        for remove_id in remove_ids:
+            dev_reg.async_remove_device(remove_id)
+        # dev_reg.async_update_device()
         #Migrate from v1 to v2. No data changes happened here, so just pass it down the same way
         hass.config_entries.async_update_entry(entry, data=entry.data, version=2)
         return True
