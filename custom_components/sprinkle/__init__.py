@@ -1,3 +1,4 @@
+from homeassistant.components.device_tracker import config_entry
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
 import logging
@@ -53,3 +54,14 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Integration removal cleanup"""
     _LOGGER.info(f"Removing configuration entry for {entry.title}")
     await try_get_setup_manager(hass).async_remove(entry)
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
+    _LOGGER.info(f"Migrating configuration entry for {entry.title}")
+    if entry.version > 1:
+        # This means the user has downgraded from a future version
+        return False
+    if entry.version == 1:
+        #Migrate from v1 to v2. No data changes happened here, so just pass it down the same way
+        hass.config_entries.async_update_entry(entry, data=entry.data, version=2)
+        return True
+    return False

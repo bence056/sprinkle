@@ -159,7 +159,7 @@ class SprinkleStore(Store):
             new_data_entry = {}
 
             if old_data is not None:
-                _LOGGER.debug(f"Migrating - old data: {old_data}")
+                _LOGGER.warn(f"Migrating - old data: {old_data}")
                 if "config" in old_data:
                     new_data_entry["config"] = old_data["config"]
 
@@ -183,7 +183,7 @@ class SprinkleStore(Store):
                         sprinkle_entries[0].entry_id: new_data_entry
                     }
 
-            _LOGGER.debug(f"Migrating - new data: {old_data}")
+            _LOGGER.warn(f"Migrating - new data: {old_data}")
             old_major_version = old_major_version + 1
         return old_data
 
